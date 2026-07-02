@@ -743,11 +743,10 @@ updateLists();
         document.getElementById('billImage').value = '';
     }
 
-    function showImage(base64) {
-        const w = window.open();
-        w.document.write('<img src="' + base64 + '" style="max-width:100%">');
-    }
-
+   function showImage(base64) {
+    const w = window.open();
+    w.document.write('<img src="' + base64 + '" style="max-width:100%">');
+}
     function renderTable() {
         const tbody = document.getElementById('tripTable');
         tbody.innerHTML = '';
