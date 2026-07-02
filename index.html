@@ -1,663 +1,155 @@
 <!DOCTYPE html>
-<html>
-<script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js'
-  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyBWU839rSWrODWDs-WAM5uIR2mJSMorvcg",
-    authDomain: "bill-trip.firebaseapp.com",
-    projectId: "bill-trip",
-    storageBucket: "bill-trip.firebasestorage.app",
-    messagingSenderId: "763591165758",
-    appId: "1:763591165758:web:16dde9f2ed46886e4f8e6f",
-    measurementId: "G-C59KQBQTB9"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  window.db = db;
-  window.firestore = { collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, updateDoc };
-</script>
-</head>
+<html lang="gu">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trip Bill - આવક જાવક</title>
-<link rel="icon" type="image/png" href="icon.png">
-<link rel="apple-touch-icon" href="icon.png">
-<meta name="theme-color" content="#2563eb">
-<link rel="manifest" href="manifest.json">  
-<style>
-body{font-family:Arial,sans-serif;padding:8px;background:#f0f2f5;margin:0}
-h2{text-align:center;color:#075E54;margin:8px 0}
-.card{background:white;padding:12px;border-radius:8px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
-input,select,button{width:100%;padding:10px;margin:4px 0;border:1px solid #ddd;border-radius:5px;font-size:15px;box-sizing:border-box}
-select[multiple]{height:100px}
-.row{display:flex;gap:5px}
-.row input,.row select,.row button{flex:1}
-button{background:#25D366;color:white;font-weight:bold;border:none;cursor:pointer}
-.btn-blue{background:#128C7E}
-.btn-red{background:#ff4444}
-.btn-orange{background:#ff9800}
-.btn-purple{background:#9c27b0}
-.btn-green{background:#4caf50}
-table{width:100%;border-collapse:collapse;font-size:11px;background:white;margin-bottom:10px}
-th,td{border:1px solid #ddd;padding:5px;text-align:left}
-th{background:#075E54;color:white;position:sticky;top:0}
-.total{background:#DCF8C6;font-weight:bold}
-.del{background:#ff4444;color:white;padding:3px 6px;border:none;border-radius:3px;font-size:11px}
-.edit{background:#ffc107;color:#000;padding:3px 6px;border:none;border-radius:3px;font-size:11px;margin-right:3px}
-#srNo{background:#fffde7;font-weight:bold}
-.tabs{display:flex;gap:5px;margin-bottom:10px}
-.tab{flex:1;padding:10px;background:#ddd;border:none;border-radius:5px}
-.tab.active{background:#075E54;color:white}
-.hidden{display:none}
-.label{font-size:12px;color:#075E54;font-weight:bold;margin-top:5px}
-.income{color:#25D366;font-weight:bold}
-.expense{color:#ff4444;font-weight:bold}
-.profit{color:#075E54;font-weight:bold}
-.action-btn{display:flex;gap:3px}
-.party-header{background:#075E54;color:white;font-weight:bold;padding:8px;text-align:center;margin-top:15px;border-radius:5px 5px 0 0}
-.party-total{background:#fff3cd;font-weight:bold}
-.grand-total{background:#DCF8C6;font-weight:bold;border:2px solid #075E54}
-.checkbox-row{display:flex;align-items:center;gap:8px;margin:8px 0}
-.checkbox-row input[type="checkbox"]{width:auto;margin:0}
-.checkbox-row label{margin:0;font-size:14px}
-@media print{
-body{background:white}
-.tabs,.card:first-child,button,.checkbox-row{display:none!important}
-.card{box-shadow:none}
-h2{font-size:18px}
-table{font-size:9px}
-.party-header{page-break-before:always}
-.party-header:first-child{page-break-before:auto}
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trip Bill - Firebase Sync</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f3f4f6; padding: 10px; }
+       .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+       .header { background: #2563eb; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+       .header h1 { font-size: 24px; }
+       .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; padding: 15px; background: #f9fafb; }
+       .stat-card { background: white; padding: 15px; border-radius: 6px; text-align: center; border: 1px solid #e5e7eb; }
+       .stat-card h3 { font-size: 12px; color: #6b7280; margin-bottom: 5px; }
+       .stat-card p { font-size: 20px; font-weight: bold; color: #1f2937; }
+       .form-section { padding: 15px; border-bottom: 1px solid #e5e7eb; }
+       .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 10px; }
+       .form-group label { display: block; font-size: 12px; color: #374151; margin-bottom: 4px; font-weight: 500; }
+       .form-group input,.form-group select { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; }
+       .form-group input:focus,.form-group select:focus { outline: none; border-color: #2563eb; }
+       .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; }
+       .btn-primary { background: #2563eb; color: white; width: 100%; }
+       .btn-primary:hover { background: #1d4ed8; }
+       .btn-danger { background: #dc2626; color: white; padding: 4px 8px; font-size: 12px; }
+       .table-section { padding: 15px; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background: #f3f4f6; padding: 10px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; }
+        td { padding: 10px; border-bottom: 1px solid #e5e7eb; }
+        tr:hover { background: #f9fafb; }
+       .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; cursor: pointer; }
+       .status-paid { background: #d1fae5; color: #065f46; }
+       .status-pending { background: #fed7aa; color: #9a3412; }
+        @media (max-width: 768px) {
+           .form-grid { grid-template-columns: 1fr; }
+            table { font-size: 11px; }
+            th, td { padding: 6px; }
+        }
+    </style>
+
+    <!-- Firebase SDK - આ તારો Config છે -->
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js'
+      import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBWU839rSWrODWDs-WAM5uIR2mJSMorvcg",
+        authDomain: "bill-trip.firebaseapp.com",
+        projectId: "bill-trip",
+        storageBucket: "bill-trip.firebasestorage.app",
+        messagingSenderId: "763591165758",
+        appId: "1:763591165758:web:16dde9f2ed46886e4f8e6f",
+        measurementId: "G-C59KQBQTB9"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      window.db = db;
+      window.firestore = { collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, updateDoc };
+    </script>
 </head>
 <body>
-<h2>🚛 Trip Bill - આવક જાવક</h2>
-<div class="tabs">
-  <button class="tab active" onclick="showTab('entry')">એન્ટ્રી</button>
-  <button class="tab" onclick="showTab('bill')">બિલ/રિપોર્ટ</button>
-  <button class="tab" onclick="showTab('backup')">બેકઅપ</button>
-</div>
-<div id="entryTab">
-<div class="card">
-<div class="row">
-  <input type="number" id="srNo" placeholder="Sr No" readonly>
-  <input type="date" id="date">
-</div>
-<div class="row">
-  <input type="text" id="vehicle" placeholder="Vehicle No" list="vehicleList" oninput="checkVehicleType()">
-  <datalist id="vehicleList">
-    <option value="JCB">
-    <option value="TRACTOR">
-  </datalist>
-  <input type="text" id="trip" placeholder="Trip Details">
-</div>
-<div class="label">આવક - Income</div>
-<div class="row">
-  <input type="number" id="rate" placeholder="Rate ₹/MT" oninput="calcAmount()">
-  <input type="number" id="weight" placeholder="Weight MT" oninput="calcAmount()">
-  <input type="number" id="hours" placeholder="Hours કલાક" oninput="calcAmount()" class="hidden">
-</div>
-<input type="number" id="amount" placeholder="કુલ આવક ₹" readonly style="background:#DCF8C6;font-weight:bold">
-<div class="label">જાવક - Expense</div>
-<div class="row">
-  <input type="number" id="diesel" placeholder="ડીઝલ ₹" oninput="calcProfit()">
-  <input type="number" id="javakAmount" placeholder="જાવક Amount ₹" oninput="calcProfit()">
-</div>
-<div class="row">
-  <input type="text" id="javakDetail" placeholder="જાવક Detail: ટોલ/રોયલ્ટી/મજૂરી">
-  <input type="number" id="profit" placeholder="ચોખ્ખો નફો ₹" readonly style="background:#fffde7;font-weight:bold">
-</div>
-<div class="row">
-  <select id="account">
-    <option value="">Account સિલેક્ટ</option>
-    <option>G.P</option>
-    <option>Cash</option>
-    <option>બાકી</option>
-    <option>HDFC</option>
-    <option>SBI</option>
-    <option>Online</option>
-  </select>
-  <input type="text" id="partyName" placeholder="Party Name" list="partyList">
-  <datalist id="partyList"></datalist>
-</div>
-<input type="text" id="jamaDetails" placeholder="Amount જમા Details: ચેક/UTR/તારીખ">
-<input type="text" id="remarks" placeholder="Remarks">
-<input type="hidden" id="editIndex" value="-1">
-<button id="saveBtn" onclick="saveEntry()">એન્ટ્રી સેવ કરો</button>
-<button id="updateBtn" class="btn-orange hidden" onclick="updateEntry()">એન્ટ્રી અપડેટ કરો</button>
-</div>
-<div class="card">
-<div class="row">
-  <button class="btn-blue" onclick="exportExcel()">Excel Sheet</button>
-  <button class="btn-red" onclick="resetSrNo()">Sr No 1 થી</button>
-</div>
-<b class="income">કુલ આવક: ₹<span id="totalIncome">0</span></b> |
-<b class="expense">કુલ જાવક: ₹<span id="totalExpense">0</span></b> |
-<b class="profit">ચોખ્ખો નફો: ₹<span id="totalProfit">0</span></b>
-</div>
-<table>
-<thead>
-<tr><th>Sr</th><th>Date</th><th>Vehicle</th><th>Party</th><th>આવક</th><th>જાવક</th><th>નફો</th><th>Account</th><th>Action</th></tr>
-</thead>
-<tbody id="tableBody"></tbody>
-</table>
-</div>
-<div id="billTab" class="hidden">
-<div class="card">
-<div class="label">Filter Options</div>
-<div class="row">
-  <input type="date" id="fromDate" title="From Date">
-  <input type="date" id="toDate" title="To Date">
-</div>
-<div class="row">
-  <select id="billParty" multiple>
-    <option value="">-- All Party --</option>
-  </select>
-  <select id="billVehicle">
-    <option value="">All Vehicle</option>
-  </select>
-</div>
-<div class="row">
-  <select id="billAccount">
-    <option value="">All Account</option>
-    <option>G.P</option>
-    <option>Cash</option>
-    <option>બાકી</option>
-    <option>HDFC</option>
-    <option>SBI</option>
-    <option>Online</option>
-  </select>
-  <input type="text" id="billSearch" placeholder="Trip/Detail Search">
-</div>
-<div class="checkbox-row">
-  <input type="checkbox" id="combineParties" onchange="generateBill()">
-  <label for="combineParties">બધી પાર્ટી ભેગી કરીને એક જ બિલ બનાવો</label>
-</div>
-<div class="row">
-  <button class="btn-orange" onclick="generateBill()">બિલ જુઓ</button>
-  <button onclick="printBill()">🖨️ Print / PDF</button>
-  <button class="btn-blue" onclick="resetFilter()">Reset</button>
-</div>
-<p style="font-size:11px;color:#075E54;margin:5px 0"><b>ટિપ:</b> Ctrl+Click થી Multiple Party સિલેક્ટ કરો. Checkbox ટિક કરશો તો બધી પાર્ટી ભેગી, નહીં તો અલગ-અલગ.</p>
-</div>
-<div class="card" id="billPreview">
-<h3 id="billTitle" style="text-align:center;margin:5px 0">Bill Report</h3>
-<p id="billCount" style="text-align:center;font-size:12px;margin:0"></p>
-<p id="billFilterInfo" style="text-align:center;font-size:11px;margin:5px 0;color:#666"></p>
-<div id="billContent"></div>
-</div>
-</div>
-<div id="backupTab" class="hidden">
-<div class="card">
-<h3>Data Backup & Restore</h3>
-<p style="font-size:13px">તમારો બધો ડેટા ફોનમાં સેવ છે. ફોન ખોવાય/ફોર્મેટ થાય તો ડેટા જતો રહેશે. બેકઅપ લો.</p>
-<div class="row">
-  <button class="btn-purple" onclick="exportBackup()">📥 Backup Download</button>
-  <button class="btn-blue" onclick="document.getElementById('restoreFile').click()">📤 Restore Upload</button>
-  <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="restoreBackup(event)">
-</div>
-<div class="row" style="margin-top:10px">
-  <button class="btn-green" onclick="document.getElementById('jsonFile').click()">📂 JSON ફાઈલ Install કરો</button>
-  <input type="file" id="jsonFile" accept=".json" style="display:none" onchange="installJSON(event)">
-</div>
-<div class="row" style="margin-top:10px">
-  <button class="btn-red" onclick="clearAllData()">⚠️ બધો ડેટા ડિલીટ</button>
-</div>
-<p style="font-size:11px;color:#666">Backup ફાઈલ સેવ થશે. એને Google Drive/WhatsApp માં સાચવી રાખો.</p>
-<p style="font-size:11px;color:#075E54"><b>JSON Install:</b> મેં આપેલી hisab.json ફાઈલ અહીં અપલોડ કરો એટલે આખો ડેટા રીસ્ટોર થઈ જશે.</p>
-</div>
-</div>
-<script>
-window.entries = JSON.parse(localStorage.getItem('tripBill') || '[]');
-window.lastSrNo = Number(localStorage.getItem('lastSrNo') || '0');
-window.currentBill = [];
+    <div class="container">
+        <div class="header">
+            <h1>🚗 Trip Bill Manager</h1>
+            <p style="font-size:12px;opacity:0.9;margin-top:5px">Online Sync - Mobile + Laptop</p>
+        </div>
 
-function formatDate(dateStr){
-  if(!dateStr) return '';
-  var arr = dateStr.split('-');
-  return arr[2]+'/'+arr[1]+'/'+arr[0];
-}
-function showTab(tab){
-  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
-  event.target.classList.add('active');
-  document.getElementById('entryTab').classList.toggle('hidden',tab!=='entry');
-  document.getElementById('billTab').classList.toggle('hidden',tab!=='bill');
-  document.getElementById('backupTab').classList.toggle('hidden',tab!=='backup');
-  if(tab==='bill') updateLists();
-}
-function getNextSrNo(){
-  window.lastSrNo++;
-  localStorage.setItem('lastSrNo',window.lastSrNo);
-  return window.lastSrNo;
-}
-function setSrNo(){
-  document.getElementById('srNo').value = window.lastSrNo + 1;
-}
-function resetSrNo(){
-  if(confirm('Sr No 1 થી શરૂ કરવો?')){
-    window.lastSrNo = 0;
-    localStorage.setItem('lastSrNo',window.lastSrNo);
-    setSrNo();
-  }
-}
-function checkVehicleType(){
-  var v = document.getElementById('vehicle').value.toUpperCase();
-  var wt = document.getElementById('weight');
-  var hrs = document.getElementById('hours');
-  var rate = document.getElementById('rate');
-  if(v === 'JCB'){
-    wt.classList.add('hidden');
-    hrs.classList.remove('hidden');
-    rate.placeholder = 'Rate ₹/Hour';
-    wt.value = '';
-  }else{
-    wt.classList.remove('hidden');
-    hrs.classList.add('hidden');
-    rate.placeholder = 'Rate ₹/MT';
-    hrs.value = '';
-  }
-  calcAmount();
-}
-function calcAmount(){
-  var rate = Number(document.getElementById('rate').value||0);
-  var v = document.getElementById('vehicle').value.toUpperCase();
-  var total = 0;
-  if(v === 'JCB'){
-    var hrs = Number(document.getElementById('hours').value||0);
-    total = rate * hrs;
-  }else{
-    var wt = Number(document.getElementById('weight').value||0);
-    total = rate * wt;
-  }
-  document.getElementById('amount').value = total.toFixed(0);
-  calcProfit();
-}
-function calcProfit(){
-  var income = Number(document.getElementById('amount').value||0);
-  var diesel = Number(document.getElementById('diesel').value||0);
-  var javak = Number(document.getElementById('javakAmount').value||0);
-  document.getElementById('profit').value = (income - diesel - javak).toFixed(0);
-}
-function updateLists(){
-  var parties = [...new Set(window.entries.map(function(e){return e.partyName || e.Party}))].filter(function(p){return p}).sort();
-  var vehicles = [...new Set(window.entries.map(function(e){return e.vehicle || e.Vehicle}))].filter(function(v){return v});
-  var dl = document.getElementById('partyList');
-  var selP = document.getElementById('billParty');
-  var selV = document.getElementById('billVehicle');
-  dl.innerHTML = '';
-  selP.innerHTML = '<option value="">-- All Party --</option>';
-  selV.innerHTML = '<option value="">All Vehicle</option>';
-  parties.forEach(function(p){
-    dl.innerHTML += '<option value="'+p+'">';
-    selP.innerHTML += '<option value="'+p+'">'+p+'</option>';
-  });
-  vehicles.forEach(function(v){
-    selV.innerHTML += '<option value="'+v+'">'+v+'</option>';
-  });
-}
-function saveEntry(){
-  var v = document.getElementById('vehicle').value.toUpperCase();
-  var e = {
-    srNo: getNextSrNo(),
-    date: document.getElementById('date').value,
-    vehicle: v,
-    trip: document.getElementById('trip').value,
-    rate: Number(document.getElementById('rate').value||0),
-    weight: v === 'JCB'? 0 : Number(document.getElementById('weight').value||0),
-    hours: v === 'JCB'? Number(document.getElementById('hours').value||0) : 0,
-    amount: Number(document.getElementById('amount').value||0),
-    diesel: Number(document.getElementById('diesel').value||0),
-    javakAmount: Number(document.getElementById('javakAmount').value||0),
-    javakDetail: document.getElementById('javakDetail').value,
-    profit: Number(document.getElementById('profit').value||0),
-    account: document.getElementById('account').value,
-    partyName: document.getElementById('partyName').value,
-    jamaDetails: document.getElementById('jamaDetails').value,
-    remarks: document.getElementById('remarks').value
-  };
-  if(!e.date ||!e.vehicle ||!e.partyName){alert('Date, Vehicle, Party Name ફરજિયાત છે');return;}
-  window.entries.push(e);
-  localStorage.setItem('tripBill',JSON.stringify(window.entries));
-  showData();
-  setSrNo();
-  updateLists();
-  clearForm();
-}
-function editEntry(i){
-  var e = window.entries[i];
-  document.getElementById('srNo').value = e.srNo;
-  document.getElementById('date').value = e.date;
-  document.getElementById('vehicle').value = e.vehicle;
-  document.getElementById('trip').value = e.trip;
-  document.getElementById('rate').value = e.rate;
-  document.getElementById('weight').value = e.weight || '';
-  document.getElementById('hours').value = e.hours || '';
-  document.getElementById('amount').value = e.amount;
-  document.getElementById('diesel').value = e.diesel;
-  document.getElementById('javakAmount').value = e.javakAmount;
-  document.getElementById('javakDetail').value = e.javakDetail;
-  document.getElementById('profit').value = e.profit;
-  document.getElementById('account').value = e.account;
-  document.getElementById('partyName').value = e.partyName;
-  document.getElementById('jamaDetails').value = e.jamaDetails;
-  document.getElementById('remarks').value = e.remarks;
-  document.getElementById('editIndex').value = i;
-  checkVehicleType();
-  document.getElementById('saveBtn').classList.add('hidden');
-  document.getElementById('updateBtn').classList.remove('hidden');
-  document.querySelector('.tab').click();
-  window.scrollTo(0,0);
-}
-function updateEntry(){
-  var i = Number(document.getElementById('editIndex').value);
-  if(i<0) return;
-  var v = document.getElementById('vehicle').value.toUpperCase();
-  window.entries[i] = {
-    srNo: Number(document.getElementById('srNo').value),
-    date: document.getElementById('date').value,
-    vehicle: v,
-    trip: document.getElementById('trip').value,
-    rate: Number(document.getElementById('rate').value||0),
-    weight: v === 'JCB'? 0 : Number(document.getElementById('weight').value||0),
-    hours: v === 'JCB'? Number(document.getElementById('hours').value||0) : 0,
-    amount: Number(document.getElementById('amount').value||0),
-    diesel: Number(document.getElementById('diesel').value||0),
-    javakAmount: Number(document.getElementById('javakAmount').value||0),
-    javakDetail: document.getElementById('javakDetail').value,
-    profit: Number(document.getElementById('profit').value||0),
-    account: document.getElementById('account').value,
-    partyName: document.getElementById('partyName').value,
-    jamaDetails: document.getElementById('jamaDetails').value,
-    remarks: document.getElementById('remarks').value
-  };
-  localStorage.setItem('tripBill',JSON.stringify(window.entries));
-  showData();
-  updateLists();
-  clearForm();
-  document.getElementById('saveBtn').classList.remove('hidden');
-  document.getElementById('updateBtn').classList.add('hidden');
-  document.getElementById('editIndex').value = -1;
-  alert('એન્ટ્રી અ��ડેટ થઈ ગઈ!');
-}
-function clearForm(){
-  ['vehicle','trip','rate','weight','hours','amount','diesel','javakAmount','javakDetail','profit','account','partyName','jamaDetails','remarks'].forEach(function(id){document.getElementById(id).value=''});
-  checkVehicleType();
-  setSrNo();
-}
-function showData(){
-  var html = '', totalIncome = 0, totalExpense = 0, totalProfit = 0;
-  window.entries.forEach(function(e,i){
-    var expense = (e.diesel || 0) + (e.javakAmount || 0) + (e.જાવક || 0);
-    var income = e.amount || e.આવક || 0;
-    var profit = e.profit || e.નફો || 0;
-    totalIncome += income;
-    totalExpense += expense;
-    totalProfit += profit;
-    html += '<tr><td>'+(e.srNo || e.Sr)+'</td><td>'+formatDate(e.date || e.Date)+'</td><td>'+(e.vehicle || e.Vehicle)+'</td><td>'+(e.partyName || e.Party)+'</td><td class="income">₹'+income+'</td><td class="expense">₹'+expense+'</td><td class="profit">₹'+profit+'</td><td>'+(e.account || e.Account ||'-')+'</td><td class="action-btn"><button class="edit" onclick="editEntry('+i+')">✏️</button><button class="del" onclick="delEntry('+i+')">X</button></td></tr>';
-  });
-  document.getElementById('tableBody').innerHTML = html;
-  document.getElementById('totalIncome').innerText = totalIncome;
-  document.getElementById('totalExpense').innerText = totalExpense;
-  document.getElementById('totalProfit').innerText = totalProfit;
-}
-function delEntry(i){
-  if(confirm('આ એન્ટ્રી ડિલીટ કરવી?')){
-    window.entries.splice(i,1);
-    localStorage.setItem('tripBill',JSON.stringify(window.entries));
-    showData();
-  }
-}
-function resetFilter(){
-  document.getElementById('fromDate').value = '';
-  document.getElementById('toDate').value = '';
-  document.getElementById('billParty').selectedIndex = -1;
-  document.getElementById('billVehicle').value = '';
-  document.getElementById('billAccount').value = '';
-  document.getElementById('billSearch').value = '';
-  document.getElementById('combineParties').checked = false;
-  generateBill();
-}
-function generateBill(){
-  var partySelect = document.getElementById('billParty');
-  var selectedParties = Array.from(partySelect.selectedOptions).map(function(opt){return opt.value}).filter(function(v){return v});
-  var vehicle = document.getElementById('billVehicle').value;
-  var account = document.getElementById('billAccount').value;
-  var search = document.getElementById('billSearch').value.toLowerCase();
-  var from = document.getElementById('fromDate').value;
-  var to = document.getElementById('toDate').value;
-  var combine = document.getElementById('combineParties').checked;
+        <div class="stats">
+            <div class="stat-card">
+                <h3>કુલ Trips</h3>
+                <p id="totalTrips">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>કુલ રકમ</h3>
+                <p id="totalAmount">₹0</p>
+            </div>
+            <div class="stat-card">
+                <h3>બાકી રકમ</h3>
+                <p id="pendingAmount" style="color:#ea580c">₹0</p>
+            </div>
+        </div>
 
-  var filtered = window.entries.filter(function(e){
-    var pName = e.partyName || e.Party;
-    var vName = e.vehicle || e.Vehicle;
-    var acc = e.account || e.Account;
-    if(selectedParties.length > 0 &&!selectedParties.includes(pName)) return false;
-    if(vehicle && vName!== vehicle) return false;
-    if(account && acc!== account) return false;
-    if(from && e.date < from) return false;
-    if(to && e.date > to) return false;
-    if(search &&!(e.trip||'').toLowerCase().includes(search) &&!(e.javakDetail||'').toLowerCase().includes(search) &&!(e.remarks||'').toLowerCase().includes(search)) return false;
-    return true;
-  });
+        <div class="form-section">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>તારીખ</label>
+                    <input type="date" id="date">
+                </div>
+                <div class="form-group">
+                    <label>પાર્ટી નામ</label>
+                    <input type="text" id="party" placeholder="પાર્ટીનું નામ">
+                </div>
+                <div class="form-group">
+                    <label>ક્યાંથી</label>
+                    <input type="text" id="from" placeholder="From">
+                </div>
+                <div class="form-group">
+                    <label>ક્યાં સુધી</label>
+                    <input type="text" id="to" placeholder="To">
+                </div>
+                <div class="form-group">
+                    <label>કિલોમીટર</label>
+                    <input type="number" id="km" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>ભાવ (Per KM)</label>
+                    <input type="number" id="rate" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>કુલ રકમ</label>
+                    <input type="number" id="amount" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>વાહન નંબર</label>
+                    <input type="text" id="vehicle" placeholder="GJ-01-XX-1234">
+                </div>
+                <div class="form-group">
+                    <label>સ્ટેટસ</label>
+                    <select id="status">
+                        <option value="Pending">Pending</option>
+                        <option value="Paid">Paid</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>બિલ ફોટો</label>
+                    <input type="file" id="billImage" accept="image/*">
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="addTrip()">➕ Trip ઉમેરો</button>
+        </div>
 
-  var html = '';
-  var grandTotalWtHrs = 0, grandTotalIncome = 0, grandTotalDiesel = 0, grandTotalJavak = 0, grandTotalProfit = 0;
+        <div class="table-section">
+            <table>
+                <thead>
+                    <tr>
+                        <th>તારીખ</th>
+                        <th>પાર્ટી</th>
+                        <th>રૂટ</th>
+                        <th>KM</th>
+                        <th>રકમ</th>
+                        <th>વાહન</th>
+                        <th>સ્ટેટસ</th>
+                        <th>બિલ</th>
+                        <th>ડિલીટ</th>
+                    </tr>
+                </thead>
+                <tbody id="tripTable"></tbody>
+            </table>
+        </div>
+    </div>
 
-  if(combine){
-    var sr = 1;
-    html += '<table><thead><tr><th>Sr</th><th>તારીખ</th><th>Vehicle</th><th>Party</th><th>Trip</th><th>Rate</th><th>Weight/Hrs</th><th>આવક</th><th>ડીઝલ</th><th>જાવક Amt</th><th>જાવક Detail</th><th>નફો</th><th>Account</th><th>જમા Details</th><th>Remarks</th></tr></thead><tbody>';
-
-    filtered.forEach(function(e){
-      var vName = e.vehicle || e.Vehicle;
-      var qty = vName === 'JCB'? (e.hours || 0) : (e.weight || 0);
-      var qtyLabel = vName === 'JCB'? (e.hours || 0) + ' Hrs' : (e.weight || 0) + ' MT';
-      var income = e.amount || e.આવક || 0;
-      var diesel = e.diesel || e.ડીઝલ || 0;
-      var javakAmt = e.javakAmount || e['જાવક Amt'] || 0;
-      var profit = e.profit || e.નફો || 0;
-      grandTotalWtHrs += qty;
-      grandTotalIncome += income;
-      grandTotalDiesel += diesel;
-      grandTotalJavak += javakAmt;
-      grandTotalProfit += profit;
-      html += '<tr><td>'+sr+'</td><td>'+formatDate(e.date || e.Date)+'</td><td>'+vName+'</td><td>'+(e.partyName || e.Party)+'</td><td>'+(e.trip || '-')+'</td><td>'+(e.rate || e.Rate || 0)+'</td><td>'+qtyLabel+'</td><td>'+income+'</td><td>'+diesel+'</td><td>'+javakAmt+'</td><td>'+(e.javakDetail || e['જાવક Detail'] ||'-')+'</td><td>'+profit+'</td><td>'+(e.account || e.Account ||'-')+'</td><td>'+(e.jamaDetails || e['જમા Details'] ||'-')+'</td><td>'+(e.remarks || e.Remarks ||'-')+'</td></tr>';
-      sr++;
-    });
-
-    html += '<tr class="grand-total"><td colspan="6">GRAND TOTAL</td><td>'+grandTotalWtHrs.toFixed(2)+'</td><td>'+grandTotalIncome+'</td><td>'+grandTotalDiesel+'</td><td>'+grandTotalJavak+'</td><td></td><td>'+grandTotalProfit+'</td><td colspan="3"></td></tr></tbody></table>';
-
-  }else{
-    var partyGroups = {};
-    filtered.forEach(function(e){
-      var pName = e.partyName || e.Party || 'Unknown';
-      if(!partyGroups[pName]) partyGroups[pName] = [];
-      partyGroups[pName].push(e);
-    });
-
-    Object.keys(partyGroups).sort().forEach(function(partyName){
-      var partyEntries = partyGroups[partyName];
-      var sr = 1;
-      var totalWtHrs = 0, totalIncome = 0, totalDiesel = 0, totalJavak = 0, totalProfit = 0;
-
-      html += '<div class="party-header">Party: '+partyName+'</div>';
-      html += '<table><thead><tr><th>Sr</th><th>તારીખ</th><th>Vehicle</th><th>Trip</th><th>Rate</th><th>Weight/Hrs</th><th>આવક</th><th>ડીઝલ</th><th>જાવક Amt</th><th>જાવક Detail</th><th>નફો</th><th>Account</th><th>જમા Details</th><th>Remarks</th></tr></thead><tbody>';
-
-      partyEntries.forEach(function(e){
-        var vName = e.vehicle || e.Vehicle;
-        var qty = vName === 'JCB'? (e.hours || 0) : (e.weight || 0);
-        var qtyLabel = vName === 'JCB'? (e.hours || 0) + ' Hrs' : (e.weight || 0) + ' MT';
-        var income = e.amount || e.આવક || 0;
-        var diesel = e.diesel || e.ડીઝલ || 0;
-        var javakAmt = e.javakAmount || e['જાવક Amt'] || 0;
-        var profit = e.profit || e.નફો || 0;
-        totalWtHrs += qty;
-        totalIncome += income;
-        totalDiesel += diesel;
-        totalJavak += javakAmt;
-        totalProfit += profit;
-
-        html += '<tr><td>'+sr+'</td><td>'+formatDate(e.date || e.Date)+'</td><td>'+vName+'</td><td>'+(e.trip || '-')+'</td><td>'+(e.rate || e.Rate || 0)+'</td><td>'+qtyLabel+'</td><td>'+income+'</td><td>'+diesel+'</td><td>'+javakAmt+'</td><td>'+(e.javakDetail || e['જાવક Detail'] ||'-')+'</td><td>'+profit+'</td><td>'+(e.account || e.Account ||'-')+'</td><td>'+(e.jamaDetails || e['જમા Details'] ||'-')+'</td><td>'+(e.remarks || e.Remarks ||'-')+'</td></tr>';
-        sr++;
-      });
-
-      grandTotalWtHrs += totalWtHrs;
-      grandTotalIncome += totalIncome;
-      grandTotalDiesel += totalDiesel;
-      grandTotalJavak += totalJavak;
-      grandTotalProfit += totalProfit;
-
-      html += '<tr class="party-total"><td colspan="5">Party Total</td><td>'+totalWtHrs.toFixed(2)+'</td><td>'+totalIncome+'</td><td>'+totalDiesel+'</td><td>'+totalJavak+'</td><td></td><td>'+totalProfit+'</td><td colspan="3"></td></tr></tbody></table>';
-    });
-
-    if(Object.keys(partyGroups).length > 1){
-      html += '<table style="margin-top:10px;border:2px solid #075E54"><thead><tr class="grand-total"><td colspan="5">GRAND TOTAL</td><td>'+grandTotalWtHrs.toFixed(2)+'</td><td>'+grandTotalIncome+'</td><td>'+grandTotalDiesel+'</td><td>'+grandTotalJavak+'</td><td></td><td>'+grandTotalProfit+'</td><td colspan="3"></td></tr></thead></table>';
-    }
-  }
-
-  document.getElementById('billContent').innerHTML = html;
-  document.getElementById('billCount').innerText = 'Total Records: '+filtered.length;
-  var title = combine? 'Combined Bill Report - આવક જાવક' : 'Party Wise Bill Report - આવક જાવક';
-  var filterInfo = [];
-  if(selectedParties.length > 0) filterInfo.push('Party: ' + selectedParties.join(', '));
-  if(vehicle) filterInfo.push('Vehicle: ' + vehicle);
-  if(account) filterInfo.push('Account: ' + account);
-  if(from) filterInfo.push('From: ' + formatDate(from));
-  if(to) filterInfo.push('To: ' + formatDate(to));
-  document.getElementById('billTitle').innerText = title;
-  document.getElementById('billFilterInfo').innerText = filterInfo.join(' | ');
-}
-function printBill(){
-  if(document.getElementById('billContent').innerHTML===''){alert('પહેલા બિલ જુઓ');return;}
-  window.print();
-}
-function exportExcel(){
-  var csv = 'Sr No,Date,Vehicle,Trip,Rate,Weight/Hours,Aavak,Diesel,Javak Amount,Javak Detail,Total Javak,Nafo,Account,Party Name,Jama Details,Remarks\n';
-  window.entries.forEach(function(e){
-    var vName = e.vehicle || e.Vehicle;
-    var qty = vName === 'JCB'? (e.hours || 0) + ' Hrs' : (e.weight || 0) + ' MT';
-    var totalJavak = (e.diesel || e.ડીઝલ || 0) + (e.javakAmount || e['જાવક Amt'] || 0);
-    csv += (e.srNo || e.Sr)+','+formatDate(e.date || e.Date)+','+vName+','+(e.trip || '')+','+(e.rate || e.Rate || 0)+','+qty+','+(e.amount || e.આવક || 0)+','+(e.diesel || e.ડીઝલ || 0)+','+(e.javakAmount || e['જાવક Amt'] || 0)+','+(e.javakDetail || e['જાવક Detail'] ||'')+','+totalJavak+','+(e.profit || e.નફો || 0)+','+(e.account || e.Account ||'')+','+(e.partyName || e.Party)+','+(e.jamaDetails || e['જમા Details'] ||'')+','+(e.remarks || e.Remarks ||'')+'\n';
-  });
-  var blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url; a.download = 'trip-bill-aavak-javak-'+new Date().toISOString().split('T')[0]+'.csv'; a.click();
-}
-function exportBackup(){
-  var data = {
-    entries: window.entries,
-    lastSrNo: window.lastSrNo,
-    backupDate: new Date().toISOString()
-  };
-  var blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url; a.download = 'trip-backup-'+new Date().toISOString().split('T')[0]+'.json'; a.click();
-  alert('Backup Download થઈ ગયું. આ ફાઈલ Google Drive/WhatsApp માં સાચવી રાખો.');
-}
-function restoreBackup(event){
-  var file = event.target.files[0];
-  if(!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e){
-    try{
-      var data = JSON.parse(e.target.result);
-      if(confirm('જૂનો બધો ડેટા ભૂંસાઈ જશે અને બેકઅપ વાળો ડેટા આવી જશે. પાક્કું?')){
-        window.entries = data.entries || [];
-        window.lastSrNo = data.lastSrNo || 0;
-        localStorage.setItem('tripBill',JSON.stringify(window.entries));
-        localStorage.setItem('lastSrNo',window.lastSrNo);
-        showData();
-        setSrNo();
-        updateLists();
-        alert('Backup Restore થઈ ગયું!');
-      }
-    }catch(err){
-      alert('ફાઈલ ખોટી છે. સાચી JSON backup ફાઈલ સિલેક્ટ કરો.');
-    }
-  };
-  reader.readAsText(file);
-  event.target.value = '';
-}
-function installJSON(event){
-  var file = event.target.files[0];
-  if(!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e){
-    try{
-      var jsonData = JSON.parse(e.target.result);
-      if(!Array.isArray(jsonData)){
-        alert('JSON ફાઈલમાં Array હોવું જોઈએ. ફાઈલ ખોટી છે.');
-        return;
-      }
-            if(confirm('આ ફાઈલમાં '+jsonData.length+' એન્ટ્રી છે. જૂનો બધો ડેટા ભૂંસાઈ જશે. પાક્કું?')){
-        window.entries = jsonData.map(function(item,i){
-          return {
-            srNo: item.Sr || item.srNo || (i+1),
-            date: item.Date? item.Date.split('/').reverse().join('-') : (item.date || ''),
-            vehicle: item.Vehicle || item.vehicle || '',
-            trip: item.Trip || item.trip || '',
-            rate: item.Rate || item.rate || 0,
-            weight: (item.Vehicle==='JCB' || item.vehicle==='JCB')? 0 : (item.Weight || item.weight || 0),
-            hours: (item.Vehicle==='JCB' || item.vehicle==='JCB')? (item.Hours || item.hours || 0) : 0,
-            amount: item.આવક || item.amount || 0,
-            diesel: item.ડીઝલ || item.diesel || 0,
-            javakAmount: item.જાવક || item.javakAmount || item['જાવક Amt'] || 0,
-            javakDetail: item['જાવક Detail'] || item.javakDetail || '',
-            profit: item.નફો || item.profit || 0,
-            account: item.Account || item.account || '',
-            partyName: item.Party || item.partyName || '',
-            jamaDetails: item['જમા Details'] || item.jamaDetails || '',
-            remarks: item.Remarks || item.remarks || ''
-          }
-        });
-        window.lastSrNo = Math.max.apply(null, window.entries.map(function(e){return e.srNo}));
-        localStorage.setItem('tripBill',JSON.stringify(window.entries));
-        localStorage.setItem('lastSrNo',window.lastSrNo);
-        showData();
-        setSrNo();
-        updateLists();
-        alert('✅ સફળ! '+window.entries.length+' એન્ટ્રી Install થઈ ગઈ.');
-      }
-    }catch(err){
-      alert('JSON ફાઈલ ખોટી છે. સાચી hisab.json ફાઈલ સિલેક્ટ કરો. Error: '+err.message);
-    }
-  };
-  reader.readAsText(file);
-  event.target.value = '';
-}
-function clearAllData(){
-  if(confirm('બધો ડેટા ડિલીટ થઈ જશે. પાક્કું? બેકઅપ લીધું?')){
-    if(confirm('છેલ્લી વાર પૂછું છું. બધું ભૂંસી નાખું?')){
-      window.entries = [];
-      window.lastSrNo = 0;
-      localStorage.setItem('tripBill',JSON.stringify(window.entries));
-      localStorage.setItem('lastSrNo',window.lastSrNo);
-      showData();
-      setSrNo();
-      alert('બધો ડેટા ડિલીટ થઈ ગયો.');
-    }
-  }
-}
-// Init
-document.getElementById('date').valueAsDate = new Date();
-var today = new Date().toISOString().split('T')[0];
-document.getElementById('fromDate').value = today.substring(0,8)+'01';
-document.getElementById('toDate').value = today;
-checkVehicleType();
-setSrNo();
-showData();
-updateLists();
-
-</script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
-  }
 <script>
     let trips = [];
     const { db, firestore } = window;
@@ -743,10 +235,11 @@ updateLists();
         document.getElementById('billImage').value = '';
     }
 
-   function showImage(base64) {
-    const w = window.open();
-    w.document.write('<img src="' + base64 + '" style="max-width:100%">');
-}
+    function showImage(base64) {
+        const w = window.open();
+        w.document.write('<img src="' + base64 + '" style="max-width:100%">');
+    }
+
     function renderTable() {
         const tbody = document.getElementById('tripTable');
         tbody.innerHTML = '';
@@ -765,9 +258,9 @@ updateLists();
                 <td>${t.km}</td>
                 <td>₹${t.amount}</td>
                 <td>${t.vehicle}</td>
-                <td><button onclick="toggleStatus('${t.id}')" style="background:${t.status==='Paid'?'#16a34a':'#ea580c'};color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:12px">${t.status}</button></td>
+                <td><span class="status-badge ${t.status==='Paid'?'status-paid':'status-pending'}" onclick="toggleStatus('${t.id}')">${t.status}</span></td>
                 <td>${t.image? '<button onclick="showImage(`' + t.image + '`)" style="background:#2563eb;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:12px">📷 જુઓ</button>' : '-'}</td>
-                <td><button class="btn-danger" onclick="deleteTrip('${t.id}')" style="padding:4px 8px;font-size:12px">🗑️</button></td>
+                <td><button class="btn-danger" onclick="deleteTrip('${t.id}')">🗑️</button></td>
             `;
             tbody.appendChild(tr);
         });
