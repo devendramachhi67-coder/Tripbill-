@@ -1,5 +1,24 @@
 <!DOCTYPE html>
 <html>
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js'
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'
+
+  // અહીં તારો firebaseConfig પેસ્ટ કર
+  const firebaseConfig = {
+    apiKey: "PASTE_YOURS_HERE",
+    authDomain: "PASTE_YOURS_HERE",
+    projectId: "PASTE_YOURS_HERE",
+    storageBucket: "PASTE_YOURS_HERE",
+    messagingSenderId: "PASTE_YOURS_HERE",
+    appId: "PASTE_YOURS_HERE"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  window.db = db;
+  window.firestore = { collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, updateDoc };
+</script>  
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -638,6 +657,125 @@ updateLists();
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js');
   }
-</script>  
+<script>
+    let trips = [];
+    const { db, firestore } = window;
+    const { collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, updateDoc } = firestore;
+
+    // Real-time Sync - મોબાઈલમાં એડ કરે તો લેપટોપમાં આપોઆપ દેખાય
+    onSnapshot(collection(db, "trips"), (snapshot) => {
+        trips = [];
+        snapshot.forEach(doc => {
+            trips.push({ id: doc.id,...doc.data() });
+        });
+        renderTable();
+    });
+
+    document.getElementById('km').addEventListener('input', calcAmount);
+    document.getElementById('rate').addEventListener('input', calcAmount);
+
+    function calcAmount() {
+        const km = parseFloat(document.getElementById('km').value) || 0;
+        const rate = parseFloat(document.getElementById('rate').value) || 0;
+        document.getElementById('amount').value = km * rate;
+    }
+
+    async function addTrip() {
+        const fileInput = document.getElementById('billImage');
+        const file = fileInput.files[0];
+
+        const trip = {
+            date: document.getElementById('date').value,
+            party: document.getElementById('party').value,
+            from: document.getElementById('from').value,
+            to: document.getElementById('to').value,
+            km: parseFloat(document.getElementById('km').value) || 0,
+            rate: parseFloat(document.getElementById('rate').value) || 0,
+            amount: parseFloat(document.getElementById('amount').value) || 0,
+            vehicle: document.getElementById('vehicle').value,
+            status: document.getElementById('status').value,
+            image: null,
+            createdAt: Date.now()
+        };
+
+        if (!trip.date ||!trip.party ||!trip.amount) {
+            alert('તારીખ, પાર્ટી અને રકમ ફરજિયાત છે!');
+            return;
+        }
+
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                trip.image = e.target.result;
+                await addDoc(collection(db, "trips"), trip);
+                clearForm();
+            };
+            reader.readAsDataURL(file);
+        } else {
+            await addDoc(collection(db, "trips"), trip);
+            clearForm();
+        }
+    }
+
+    async function deleteTrip(id) {
+        if (confirm('આ Trip ડિલીટ કરવી છે?')) {
+            await deleteDoc(doc(db, "trips", id));
+        }
+    }
+
+    async function toggleStatus(id) {
+        const trip = trips.find(t => t.id === id);
+        const newStatus = trip.status === 'Paid'? 'Pending' : 'Paid';
+        await updateDoc(doc(db, "trips", id), { status: newStatus });
+    }
+
+    function clearForm() {
+        document.getElementById('date').value = '';
+        document.getElementById('party').value = '';
+        document.getElementById('from').value = '';
+        document.getElementById('to').value = '';
+        document.getElementById('km').value = '';
+        document.getElementById('rate').value = '';
+        document.getElementById('amount').value = '';
+        document.getElementById('vehicle').value = '';
+        document.getElementById('status').value = 'Pending';
+        document.getElementById('billImage').value = '';
+    }
+
+    function showImage(base64) {
+        const w = window.open();
+        w.document.write('<img src="' + base64 + '" style="max-width:100%">');
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('tripTable');
+        tbody.innerHTML = '';
+
+        let totalAmt = 0, pendingAmt = 0;
+
+        trips.sort((a,b) => b.createdAt - a.createdAt).forEach(t => {
+            totalAmt += t.amount;
+            if (t.status === 'Pending') pendingAmt += t.amount;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${t.date}</td>
+                <td>${t.party}</td>
+                <td>${t.from} → ${t.to}</td>
+                <td>${t.km}</td>
+                <td>₹${t.amount}</td>
+                <td>${t.vehicle}</td>
+                <td><button onclick="toggleStatus('${t.id}')" style="background:${t.status==='Paid'?'#16a34a':'#ea580c'};color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:12px">${t.status}</button></td>
+                <td>${t.image? '<button onclick="showImage(`' + t.image + '`)" style="background:#2563eb;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:12px">📷 જુઓ</button>' : '-'}</td>
+                <td><button class="btn-danger" onclick="deleteTrip('${t.id}')" style="padding:4px 8px;font-size:12px">🗑️</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('totalTrips').textContent = trips.length;
+        document.getElementById('totalAmount').textContent = '₹' + totalAmt;
+        document.getElementById('pendingAmount').textContent = '₹' + pendingAmt;
+    }
+</script>
 </body>
 </html>
