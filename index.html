@@ -54,27 +54,6 @@ table{font-size:9px}
 .party-header:first-child{page-break-before:auto}
 }
 </style>
-
-<!-- Firebase SDK -->
-<script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js'
-  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyBWU839rSWrODWDs-WAM5uIR2mJSMorvcg",
-    authDomain: "bill-trip.firebaseapp.com",
-    projectId: "bill-trip",
-    storageBucket: "bill-trip.firebasestorage.app",
-    messagingSenderId: "763591165758",
-    appId: "1:763591165758:web:16dde9f2ed46886e4f8e6f",
-    measurementId: "G-C59KQBQTB9"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  window.db = db;
-  window.firestore = { collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, updateDoc };
-</script>
 </head>
 <body>
 <h2>🚛 Trip Bill - આવક જાવક</h2>
@@ -213,389 +192,425 @@ table{font-size:9px}
 </div>
 </div>
 
-<script>
-window.entries = [];
-window.lastSrNo = 0;
-window.currentBill = [];
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js'
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'
 
-const { db, firestore } = window;
-const { collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, updateDoc } = firestore;
+  const firebaseConfig = {
+    apiKey: "AIzaSyBWU839rSWrODWDs-WAM5uIR2mJSMorvcg",
+    authDomain: "bill-trip.firebaseapp.com",
+    projectId: "bill-trip",
+    storageBucket: "bill-trip.firebasestorage.app",
+    messagingSenderId: "763591165758",
+    appId: "1:763591165758:web:16dde9f2ed46886e4f8e6f",
+    measurementId: "G-C59KQBQTB9"
+  };
 
-// Firebase Real-time Sync
-onSnapshot(collection(db, "entries"), (snapshot) => {
-    window.entries = [];
-    snapshot.forEach(docSnap => {
-        window.entries.push({ firebaseId: docSnap.id,...docSnap.data() });
-    });
-    if (window.entries.length > 0) {
-        window.lastSrNo = Math.max(...window.entries.map(e => e.srNo || 0));
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  window.entries = [];
+  window.lastSrNo = 0;
+  window.currentBill = [];
+
+  // Firebase Real-time Sync
+  onSnapshot(collection(db, "entries"), (snapshot) => {
+      window.entries = [];
+      snapshot.forEach(docSnap => {
+          window.entries.push({ firebaseId: docSnap.id,...docSnap.data() });
+      });
+      if (window.entries.length > 0) {
+          window.lastSrNo = Math.max(...window.entries.map(e => e.srNo || 0));
+      }
+      showData();
+      setSrNo();
+      updateLists();
+  });
+
+  window.formatDate = function(dateStr){
+    if(!dateStr) return '';
+    var arr = dateStr.split('-');
+    return arr[2]+'/'+arr[1]+'/'+arr[0];
+  }
+
+  window.showTab = function(tab){
+    document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
+    event.target.classList.add('active');
+    document.getElementById('entryTab').classList.toggle('hidden',tab!=='entry');
+    document.getElementById('billTab').classList.toggle('hidden',tab!=='bill');
+    document.getElementById('backupTab').classList.toggle('hidden',tab!=='backup');
+    if(tab==='bill') updateLists();
+  }
+
+  function getNextSrNo(){
+    window.lastSrNo++;
+    return window.lastSrNo;
+  }
+
+  window.setSrNo = function(){
+    document.getElementById('srNo').value = window.lastSrNo + 1;
+  }
+
+  window.resetSrNo = function(){
+    if(confirm('Sr No 1 થી શરૂ કરવો? આગળની એન્ટ્રી 1 થી થશે.')){
+      window.lastSrNo = 0;
+      setSrNo();
     }
-    showData();
-    setSrNo();
-    updateLists();
-});
-
-function formatDate(dateStr){
-  if(!dateStr) return '';
-  var arr = dateStr.split('-');
-  return arr[2]+'/'+arr[1]+'/'+arr[0];
-}
-function showTab(tab){
-  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
-  event.target.classList.add('active');
-  document.getElementById('entryTab').classList.toggle('hidden',tab!=='entry');
-  document.getElementById('billTab').classList.toggle('hidden',tab!=='bill');
-  document.getElementById('backupTab').classList.toggle('hidden',tab!=='backup');
-  if(tab==='bill') updateLists();
-}
-function getNextSrNo(){
-  window.lastSrNo++;
-  return window.lastSrNo;
-}
-function setSrNo(){
-  document.getElementById('srNo').value = window.lastSrNo + 1;
-}
-function resetSrNo(){
-  if(confirm('Sr No 1 થી શરૂ કરવો? આગળની એન્ટ્રી 1 થી થશે.')){
-    window.lastSrNo = 0;
-    setSrNo();
   }
-}
-function checkVehicleType(){
-  var v = document.getElementById('vehicle').value.toUpperCase();
-  var wt = document.getElementById('weight');
-  var hrs = document.getElementById('hours');
-  var rate = document.getElementById('rate');
-  if(v === 'JCB'){
-    wt.classList.add('hidden');
-    hrs.classList.remove('hidden');
-    rate.placeholder = 'Rate ₹/Hour';
-    wt.value = '';
-  }else{
-    wt.classList.remove('hidden');
-    hrs.classList.add('hidden');
-    rate.placeholder = 'Rate ₹/MT';
-    hrs.value = '';
-  }
-  calcAmount();
-}
-function calcAmount(){
-  var rate = Number(document.getElementById('rate').value||0);
-  var v = document.getElementById('vehicle').value.toUpperCase();
-  var total = 0;
-  if(v === 'JCB'){
-    var hrs = Number(document.getElementById('hours').value||0);
-    total = rate * hrs;
-  }else{
-    var wt = Number(document.getElementById('weight').value||0);
-    total = rate * wt;
-  }
-  document.getElementById('amount').value = total.toFixed(0);
-  calcProfit();
-}
-function calcProfit(){
-  var income = Number(document.getElementById('amount').value||0);
-  var diesel = Number(document.getElementById('diesel').value||0);
-  var javak = Number(document.getElementById('javakAmount').value||0);
-  document.getElementById('profit').value = (income - diesel - javak).toFixed(0);
-}
-function updateLists(){
-  var parties = [...new Set(window.entries.map(function(e){return e.partyName}))].filter(function(p){return p}).sort();
-  var vehicles = [...new Set(window.entries.map(function(e){return e.vehicle}))].filter(function(v){return v});
-  var dl = document.getElementById('partyList');
-  var selP = document.getElementById('billParty');
-  var selV = document.getElementById('billVehicle');
-  dl.innerHTML = '';
-  selP.innerHTML = '<option value="">-- All Party --</option>';
-  selV.innerHTML = '<option value="">All Vehicle</option>';
-  parties.forEach(function(p){
-    dl.innerHTML += '<option value="'+p+'">';
-    selP.innerHTML += '<option value="'+p+'">'+p+'</option>';
-  });
-  vehicles.forEach(function(v){
-    selV.innerHTML += '<option value="'+v+'">'+v+'</option>';
-  });
-}
-async function saveEntry(){
-  var v = document.getElementById('vehicle').value.toUpperCase();
-  var e = {
-    srNo: getNextSrNo(),
-    date: document.getElementById('date').value,
-    vehicle: v,
-    trip: document.getElementById('trip').value,
-    rate: Number(document.getElementById('rate').value||0),
-    weight: v === 'JCB'? 0 : Number(document.getElementById('weight').value||0),
-    hours: v === 'JCB'? Number(document.getElementById('hours').value||0) : 0,
-    amount: Number(document.getElementById('amount').value||0),
-    diesel: Number(document.getElementById('diesel').value||0),
-    javakAmount: Number(document.getElementById('javakAmount').value||0),
-    javakDetail: document.getElementById('javakDetail').value,
-    profit: Number(document.getElementById('profit').value||0),
-    account: document.getElementById('account').value,
-    partyName: document.getElementById('partyName').value,
-    jamaDetails: document.getElementById('jamaDetails').value,
-    remarks: document.getElementById('remarks').value,
-    createdAt: Date.now()
-  };
-  if(!e.date ||!e.vehicle ||!e.partyName){alert('Date, Vehicle, Party Name ફરજિયાત છે');return;}
-  await addDoc(collection(db, "entries"), e);
-  clearForm();
-}
-function editEntry(i){
-  var e = window.entries[i];
-  document.getElementById('srNo').value = e.srNo;
-  document.getElementById('date').value = e.date;
-  document.getElementById('vehicle').value = e.vehicle;
-  document.getElementById('trip').value = e.trip;
-  document.getElementById('rate').value = e.rate;
-  document.getElementById('weight').value = e.weight || '';
-  document.getElementById('hours').value = e.hours || '';
-  document.getElementById('amount').value = e.amount;
-  document.getElementById('diesel').value = e.diesel;
-  document.getElementById('javakAmount').value = e.javakAmount;
-  document.getElementById('javakDetail').value = e.javakDetail;
-  document.getElementById('profit').value = e.profit;
-  document.getElementById('account').value = e.account;
-  document.getElementById('partyName').value = e.partyName;
-  document.getElementById('jamaDetails').value = e.jamaDetails;
-  document.getElementById('remarks').value = e.remarks;
-  document.getElementById('editIndex').value = i;
-  checkVehicleType();
-  document.getElementById('saveBtn').classList.add('hidden');
-  document.getElementById('updateBtn').classList.remove('hidden');
-  document.querySelector('.tab').click();
-  window.scrollTo(0,0);
-}
-async function updateEntry(){
-  var i = Number(document.getElementById('editIndex').value);
-  if(i<0) return;
-  var v = document.getElementById('vehicle').value.toUpperCase();
-  var updatedData = {
-    srNo: Number(document.getElementById('srNo').value),
-    date: document.getElementById('date').value,
-    vehicle: v,
-    trip: document.getElementById('trip').value,
-    rate: Number(document.getElementById('rate').value||0),
-    weight: v === 'JCB'? 0 : Number(document.getElementById('weight').value||0),
-    hours: v === 'JCB'? Number(document.getElementById('hours').value||0) : 0,
-    amount: Number(document.getElementById('amount').value||0),
-    diesel: Number(document.getElementById('diesel').value||0),
-    javakAmount: Number(document.getElementById('javakAmount').value||0),
-    javakDetail: document.getElementById('javakDetail').value,
-    profit: Number(document.getElementById('profit').value||0),
-    account: document.getElementById('account').value,
-    partyName: document.getElementById('partyName').value,
-    jamaDetails: document.getElementById('jamaDetails').value,
-    remarks: document.getElementById('remarks').value
-  };
-  await updateDoc(doc(db, "entries", window.entries[i].firebaseId), updatedData);
-  clearForm();
-  document.getElementById('saveBtn').classList.remove('hidden');
-  document.getElementById('updateBtn').classList.add('hidden');
-  document.getElementById('editIndex').value = -1;
-  alert('એન્ટ્રી અપડેટ થઈ ગઈ!');
-}
-function clearForm(){
-  ['vehicle','trip','rate','weight','hours','amount','diesel','javakAmount','javakDetail','profit','account','partyName','jamaDetails','remarks'].forEach(function(id){document.getElementById(id).value=''});
-  checkVehicleType();
-  setSrNo();
-}
-function showData(){
-  var html = '', totalIncome = 0, totalExpense = 0, totalProfit = 0;
-  window.entries.sort((a,b) => (a.srNo || 0) - (b.srNo || 0)).forEach(function(e,i){
-    var expense = (e.diesel || 0) + (e.javakAmount || 0);
-    var income = e.amount || 0;
-    var profit = e.profit || 0;
-    totalIncome += income;
-    totalExpense += expense;
-    totalProfit += profit;
-    html += '<tr><td>'+e.srNo+'</td><td>'+formatDate(e.date)+'</td><td>'+e.vehicle+'</td><td>'+e.partyName+'</td><td class="income">₹'+income+'</td><td class="expense">₹'+expense+'</td><td class="profit">₹'+profit+'</td><td>'+(e.account||'-')+'</td><td class="action-btn"><button class="edit" onclick="editEntry('+i+')">✏️</button><button class="del" onclick="delEntry('+i+')">X</button></td></tr>';
-  });
-  document.getElementById('tableBody').innerHTML = html;
-  document.getElementById('totalIncome').innerText = totalIncome;
-  document.getElementById('totalExpense').innerText = totalExpense;
-  document.getElementById('totalProfit').innerText = totalProfit;
-}
-async function delEntry(i){
-  if(confirm('આ એન્ટ્રી ડિલીટ કરવી?')){
-    await deleteDoc(doc(db, "entries", window.entries[i].firebaseId));
-  }
-}
-function resetFilter(){
-  document.getElementById('fromDate').value = '';
-  document.getElementById('toDate').value = '';
-  document.getElementById('billParty').selectedIndex = -1;
-  document.getElementById('billVehicle').value = '';
-  document.getElementById('billAccount').value = '';
-  document.getElementById('billSearch').value = '';
-  document.getElementById('combineParties').checked = false;
-  generateBill();
-}
-function generateBill(){
-  var partySelect = document.getElementById('billParty');
-  var selectedParties = Array.from(partySelect.selectedOptions).map(function(opt){return opt.value}).filter(function(v){return v});
-  var vehicle = document.getElementById('billVehicle').value;
-  var account = document.getElementById('billAccount').value;
-  var search = document.getElementById('billSearch').value.toLowerCase();
-  var from = document.getElementById('fromDate').value;
-  var to = document.getElementById('toDate').value;
-  var combine = document.getElementById('combineParties').checked;
 
-  var filtered = window.entries.filter(function(e){
-    if(selectedParties.length > 0 &&!selectedParties.includes(e.partyName)) return false;
-    if(vehicle && e.vehicle!== vehicle) return false;
-    if(account && e.account!== account) return false;
-    if(from && e.date < from) return false;
-    if(to && e.date > to) return false;
-    if(search &&!(e.trip||'').toLowerCase().includes(search) &&!(e.javakDetail||'').toLowerCase().includes(search) &&!(e.remarks||'').toLowerCase().includes(search)) return false;
-    return true;
-  });
+  window.checkVehicleType = function(){
+    var v = document.getElementById('vehicle').value.toUpperCase();
+    var wt = document.getElementById('weight');
+    var hrs = document.getElementById('hours');
+    var rate = document.getElementById('rate');
+    if(v === 'JCB'){
+      wt.classList.add('hidden');
+      hrs.classList.remove('hidden');
+      rate.placeholder = 'Rate ₹/Hour';
+      wt.value = '';
+    }else{
+      wt.classList.remove('hidden');
+      hrs.classList.add('hidden');
+      rate.placeholder = 'Rate ₹/MT';
+      hrs.value = '';
+    }
+    calcAmount();
+  }
 
-  var html = '';
-  var grandTotalWtHrs = 0, grandTotalIncome = 0, grandTotalDiesel = 0, grandTotalJavak = 0, grandTotalProfit = 0;
+  window.calcAmount = function(){
+    var rate = Number(document.getElementById('rate').value||0);
+    var v = document.getElementById('vehicle').value.toUpperCase();
+    var total = 0;
+    if(v === 'JCB'){
+      var hrs = Number(document.getElementById('hours').value||0);
+      total = rate * hrs;
+    }else{
+      var wt = Number(document.getElementById('weight').value||0);
+      total = rate * wt;
+    }
+    document.getElementById('amount').value = total.toFixed(0);
+    calcProfit();
+  }
 
-  if(combine){
-    var sr = 1;
-    html += '<table><thead><tr><th>Sr</th><th>તારીખ</th><th>Vehicle</th><th>Party</th><th>Trip</th><th>Rate</th><th>Weight/Hrs</th><th>આવક</th><th>ડીઝલ</th><th>જાવક Amt</th><th>જાવક Detail</th><th>નફો</th><th>Account</th><th>જમા Details</th><th>Remarks</th></tr></thead><tbody>';
-    filtered.forEach(function(e){
-      var qty = e.vehicle === 'JCB'? (e.hours || 0) : (e.weight || 0);
-      var qtyLabel = e.vehicle === 'JCB'? (e.hours || 0) + ' Hrs' : (e.weight || 0) + ' MT';
-      grandTotalWtHrs += qty;
-      grandTotalIncome += e.amount;
-      grandTotalDiesel += e.diesel;
-      grandTotalJavak += e.javakAmount;
-      grandTotalProfit += e.profit;
-      html += '<tr><td>'+sr+'</td><td>'+formatDate(e.date)+'</td><td>'+e.vehicle+'</td><td>'+e.partyName+'</td><td>'+(e.trip || '-')+'</td><td>'+(e.rate || 0)+'</td><td>'+qtyLabel+'</td><td>'+e.amount+'</td><td>'+e.diesel+'</td><td>'+e.javakAmount+'</td><td>'+(e.javakDetail ||'-')+'</td><td>'+e.profit+'</td><td>'+(e.account||'-')+'</td><td>'+(e.jamaDetails||'-')+'</td><td>'+(e.remarks||'-')+'</td></tr>';
-      sr++;
+  window.calcProfit = function(){
+    var income = Number(document.getElementById('amount').value||0);
+    var diesel = Number(document.getElementById('diesel').value||0);
+    var javak = Number(document.getElementById('javakAmount').value||0);
+    document.getElementById('profit').value = (income - diesel - javak).toFixed(0);
+  }
+
+  function updateLists(){
+    var parties = [...new Set(window.entries.map(function(e){return e.partyName}))].filter(function(p){return p}).sort();
+    var vehicles = [...new Set(window.entries.map(function(e){return e.vehicle}))].filter(function(v){return v});
+    var dl = document.getElementById('partyList');
+    var selP = document.getElementById('billParty');
+    var selV = document.getElementById('billVehicle');
+    dl.innerHTML = '';
+    selP.innerHTML = '<option value="">-- All Party --</option>';
+    selV.innerHTML = '<option value="">All Vehicle</option>';
+    parties.forEach(function(p){
+      dl.innerHTML += '<option value="'+p+'">';
+      selP.innerHTML += '<option value="'+p+'">'+p+'</option>';
     });
-    html += '<tr class="grand-total"><td colspan="6">GRAND TOTAL</td><td>'+grandTotalWtHrs.toFixed(2)+'</td><td>'+grandTotalIncome+'</td><td>'+grandTotalDiesel+'</td><td>'+grandTotalJavak+'</td><td></td><td>'+grandTotalProfit+'</td><td colspan="3"></td></tr></tbody></table>';
-  }else{
-    var partyGroups = {};
-    filtered.forEach(function(e){
-      var pName = e.partyName || 'Unknown';
-      if(!partyGroups[pName]) partyGroups[pName] = [];
-      partyGroups[pName].push(e);
+    vehicles.forEach(function(v){
+      selV.innerHTML += '<option value="'+v+'">'+v+'</option>';
     });
-    Object.keys(partyGroups).sort().forEach(function(partyName){
-      var partyEntries = partyGroups[partyName];
+  }
+
+  window.saveEntry = async function(){
+    var v = document.getElementById('vehicle').value.toUpperCase();
+    var e = {
+      srNo: getNextSrNo(),
+      date: document.getElementById('date').value,
+      vehicle: v,
+      trip: document.getElementById('trip').value,
+      rate: Number(document.getElementById('rate').value||0),
+      weight: v === 'JCB'? 0 : Number(document.getElementById('weight').value||0),
+      hours: v === 'JCB'? Number(document.getElementById('hours').value||0) : 0,
+      amount: Number(document.getElementById('amount').value||0),
+      diesel: Number(document.getElementById('diesel').value||0),
+      javakAmount: Number(document.getElementById('javakAmount').value||0),
+      javakDetail: document.getElementById('javakDetail').value,
+      profit: Number(document.getElementById('profit').value||0),
+      account: document.getElementById('account').value,
+      partyName: document.getElementById('partyName').value,
+      jamaDetails: document.getElementById('jamaDetails').value,
+      remarks: document.getElementById('remarks').value,
+      createdAt: Date.now()
+    };
+    if(!e.date ||!e.vehicle ||!e.partyName){alert('Date, Vehicle, Party Name ફરજિયાત છે');return;}
+    await addDoc(collection(db, "entries"), e);
+    clearForm();
+  }
+
+  window.editEntry = function(i){
+    var e = window.entries[i];
+    document.getElementById('srNo').value = e.srNo;
+    document.getElementById('date').value = e.date;
+    document.getElementById('vehicle').value = e.vehicle;
+    document.getElementById('trip').value = e.trip;
+    document.getElementById('rate').value = e.rate;
+    document.getElementById('weight').value = e.weight || '';
+    document.getElementById('hours').value = e.hours || '';
+    document.getElementById('amount').value = e.amount;
+    document.getElementById('diesel').value = e.diesel;
+    document.getElementById('javakAmount').value = e.javakAmount;
+    document.getElementById('javakDetail').value = e.javakDetail;
+    document.getElementById('profit').value = e.profit;
+    document.getElementById('account').value = e.account;
+    document.getElementById('partyName').value = e.partyName;
+    document.getElementById('jamaDetails').value = e.jamaDetails;
+    document.getElementById('remarks').value = e.remarks;
+    document.getElementById('editIndex').value = i;
+    checkVehicleType();
+    document.getElementById('saveBtn').classList.add('hidden');
+    document.getElementById('updateBtn').classList.remove('hidden');
+    document.querySelector('.tab').click();
+    window.scrollTo(0,0);
+  }
+
+  window.updateEntry = async function(){
+    var i = Number(document.getElementById('editIndex').value);
+    if(i<0) return;
+    var v = document.getElementById('vehicle').value.toUpperCase();
+    var updatedData = {
+      srNo: Number(document.getElementById('srNo').value),
+      date: document.getElementById('date').value,
+      vehicle: v,
+      trip: document.getElementById('trip').value,
+      rate: Number(document.getElementById('rate').value||0),
+      weight: v === 'JCB'? 0 : Number(document.getElementById('weight').value||0),
+      hours: v === 'JCB'? Number(document.getElementById('hours').value||0) : 0,
+      amount: Number(document.getElementById('amount').value||0),
+      diesel: Number(document.getElementById('diesel').value||0),
+      javakAmount: Number(document.getElementById('javakAmount').value||0),
+      javakDetail: document.getElementById('javakDetail').value,
+      profit: Number(document.getElementById('profit').value||0),
+      account: document.getElementById('account').value,
+      partyName: document.getElementById('partyName').value,
+      jamaDetails: document.getElementById('jamaDetails').value,
+      remarks: document.getElementById('remarks').value
+    };
+    await updateDoc(doc(db, "entries", window.entries[i].firebaseId), updatedData);
+    clearForm();
+    document.getElementById('saveBtn').classList.remove('hidden');
+    document.getElementById('updateBtn').classList.add('hidden');
+    document.getElementById('editIndex').value = -1;
+    alert('એન્ટ્રી અપડેટ થઈ ગઈ!');
+  }
+
+  function clearForm(){
+    ['vehicle','trip','rate','weight','hours','amount','diesel','javakAmount','javakDetail','profit','account','partyName','jamaDetails','remarks'].forEach(function(id){document.getElementById(id).value=''});
+    checkVehicleType();
+    setSrNo();
+  }
+
+  function showData(){
+    var html = '', totalIncome = 0, totalExpense = 0, totalProfit = 0;
+    window.entries.sort((a,b) => (a.srNo || 0) - (b.srNo || 0)).forEach(function(e,i){
+      var expense = (e.diesel || 0) + (e.javakAmount || 0);
+      var income = e.amount || 0;
+      var profit = e.profit || 0;
+      totalIncome += income;
+      totalExpense += expense;
+      totalProfit += profit;
+      html += '<tr><td>'+e.srNo+'</td><td>'+formatDate(e.date)+'</td><td>'+e.vehicle+'</td><td>'+e.partyName+'</td><td class="income">₹'+income+'</td><td class="expense">₹'+expense+'</td><td class="profit">₹'+profit+'</td><td>'+(e.account||'-')+'</td><td class="action-btn"><button class="edit" onclick="editEntry('+i+')">✏️</button><button class="del" onclick="delEntry('+i+')">X</button></td></tr>';
+    });
+    document.getElementById('tableBody').innerHTML = html;
+    document.getElementById('totalIncome').innerText = totalIncome;
+    document.getElementById('totalExpense').innerText = totalExpense;
+    document.getElementById('totalProfit').innerText = totalProfit;
+  }
+
+  window.delEntry = async function(i){
+    if(confirm('આ એન્ટ્રી ડિલીટ કરવી?')){
+      await deleteDoc(doc(db, "entries", window.entries[i].firebaseId));
+    }
+  }
+
+  window.resetFilter = function(){
+    document.getElementById('fromDate').value = '';
+    document.getElementById('toDate').value = '';
+    document.getElementById('billParty').selectedIndex = -1;
+    document.getElementById('billVehicle').value = '';
+    document.getElementById('billAccount').value = '';
+    document.getElementById('billSearch').value = '';
+    document.getElementById('combineParties').checked = false;
+    generateBill();
+  }
+
+  window.generateBill = function(){
+    var partySelect = document.getElementById('billParty');
+    var selectedParties = Array.from(partySelect.selectedOptions).map(function(opt){return opt.value}).filter(function(v){return v});
+    var vehicle = document.getElementById('billVehicle').value;
+    var account = document.getElementById('billAccount').value;
+    var search = document.getElementById('billSearch').value.toLowerCase();
+    var from = document.getElementById('fromDate').value;
+    var to = document.getElementById('toDate').value;
+    var combine = document.getElementById('combineParties').checked;
+
+    var filtered = window.entries.filter(function(e){
+      if(selectedParties.length > 0 &&!selectedParties.includes(e.partyName)) return false;
+      if(vehicle && e.vehicle!== vehicle) return false;
+      if(account && e.account!== account) return false;
+      if(from && e.date < from) return false;
+      if(to && e.date > to) return false;
+      if(search &&!(e.trip||'').toLowerCase().includes(search) &&!(e.javakDetail||'').toLowerCase().includes(search) &&!(e.remarks||'').toLowerCase().includes(search)) return false;
+      return true;
+    });
+
+    var html = '';
+    var grandTotalWtHrs = 0, grandTotalIncome = 0, grandTotalDiesel = 0, grandTotalJavak = 0, grandTotalProfit = 0;
+
+    if(combine){
       var sr = 1;
-      var totalWtHrs = 0, totalIncome = 0, totalDiesel = 0, totalJavak = 0, totalProfit = 0;
-      html += '<div class="party-header">Party: '+partyName+'</div>';
-      html += '<table><thead><tr><th>Sr</th><th>તારીખ</th><th>Vehicle</th><th>Trip</th><th>Rate</th><th>Weight/Hrs</th><th>આવક</th><th>ડીઝલ</th><th>જાવક Amt</th><th>જાવક Detail</th><th>નફો</th><th>Account</th><th>જમા Details</th><th>Remarks</th></tr></thead><tbody>';
-      partyEntries.forEach(function(e){
+      html += '<table><thead><tr><th>Sr</th><th>તારીખ</th><th>Vehicle</th><th>Party</th><th>Trip</th><th>Rate</th><th>Weight/Hrs</th><th>આવક</th><th>ડીઝલ</th><th>જાવક Amt</th><th>જાવક Detail</th><th>નફો</th><th>Account</th><th>જમા Details</th><th>Remarks</th></tr></thead><tbody>';
+      filtered.forEach(function(e){
         var qty = e.vehicle === 'JCB'? (e.hours || 0) : (e.weight || 0);
         var qtyLabel = e.vehicle === 'JCB'? (e.hours || 0) + ' Hrs' : (e.weight || 0) + ' MT';
-        totalWtHrs += qty;
-        totalIncome += e.amount;
-        totalDiesel += e.diesel;
-        totalJavak += e.javakAmount;
-        totalProfit += e.profit;
-        html += '<tr><td>'+sr+'</td><td>'+formatDate(e.date)+'</td><td>'+e.vehicle+'</td><td>'+(e.trip || '-')+'</td><td>'+(e.rate || 0)+'</td><td>'+qtyLabel+'</td><td>'+e.amount+'</td><td>'+e.diesel+'</td><td>'+e.javakAmount+'</td><td>'+(e.javakDetail ||'-')+'</td><td>'+e.profit+'</td><td>'+(e.account||'-')+'</td><td>'+(e.jamaDetails||'-')+'</td><td>'+(e.remarks||'-')+'</td></tr>';
+        grandTotalWtHrs += qty;
+        grandTotalIncome += e.amount;
+        grandTotalDiesel += e.diesel;
+        grandTotalJavak += e.javakAmount;
+        grandTotalProfit += e.profit;
+        html += '<tr><td>'+sr+'</td><td>'+formatDate(e.date)+'</td><td>'+e.vehicle+'</td><td>'+e.partyName+'</td><td>'+(e.trip || '-')+'</td><td>'+(e.rate || 0)+'</td><td>'+qtyLabel+'</td><td>'+e.amount+'</td><td>'+e.diesel+'</td><td>'+e.javakAmount+'</td><td>'+(e.javakDetail ||'-')+'</td><td>'+e.profit+'</td><td>'+(e.account||'-')+'</td><td>'+(e.jamaDetails||'-')+'</td><td>'+(e.remarks||'-')+'</td></tr>';
         sr++;
       });
-      grandTotalWtHrs += totalWtHrs;
-      grandTotalIncome += totalIncome;
-      grandTotalDiesel += totalDiesel;
-      grandTotalJavak += totalJavak;
-      grandTotalProfit += totalProfit;
-      html += '<tr class="party-total"><td colspan="5">Party Total</td><td>'+totalWtHrs.toFixed(2)+'</td><td>'+totalIncome+'</td><td>'+totalDiesel+'</td><td>'+totalJavak+'</td><td></td><td>'+totalProfit+'</td><td colspan="3"></td></tr></tbody></table>';
+      html += '<tr class="grand-total"><td colspan="6">GRAND TOTAL</td><td>'+grandTotalWtHrs.toFixed(2)+'</td><td>'+grandTotalIncome+'</td><td>'+grandTotalDiesel+'</td><td>'+grandTotalJavak+'</td><td></td><td>'+grandTotalProfit+'</td><td colspan="3"></td></tr></tbody></table>';
+    }else{
+      var partyGroups = {};
+      filtered.forEach(function(e){
+        var pName = e.partyName || 'Unknown';
+        if(!partyGroups[pName]) partyGroups[pName] = [];
+        partyGroups[pName].push(e);
+      });
+      Object.keys(partyGroups).sort().forEach(function(partyName){
+        var partyEntries = partyGroups[partyName];
+        var sr = 1;
+        var totalWtHrs = 0, totalIncome = 0, totalDiesel = 0, totalJavak = 0, totalProfit = 0;
+        html += '<div class="party-header">Party: '+partyName+'</div>';
+        html += '<table><thead><tr><th>Sr</th><th>તારીખ</th><th>Vehicle</th><th>Trip</th><th>Rate</th><th>Weight/Hrs</th><th>આવક</th><th>ડીઝલ</th><th>જાવક Amt</th><th>જાવક Detail</th><th>નફો</th><th>Account</th><th>જમા Details</th><th>Remarks</th></tr></thead><tbody>';
+        partyEntries.forEach(function(e){
+          var qty = e.vehicle === 'JCB'? (e.hours || 0) : (e.weight || 0);
+          var qtyLabel = e.vehicle === 'JCB'? (e.hours || 0) + ' Hrs' : (e.weight || 0) + ' MT';
+          totalWtHrs += qty;
+          totalIncome += e.amount;
+          totalDiesel += e.diesel;
+          totalJavak += e.javakAmount;
+          totalProfit += e.profit;
+          html += '<tr><td>'+sr+'</td><td>'+formatDate(e.date)+'</td><td>'+e.vehicle+'</td><td>'+(e.trip || '-')+'</td><td>'+(e.rate || 0)+'</td><td>'+qtyLabel+'</td><td>'+e.amount+'</td><td>'+e.diesel+'</td><td>'+e.javakAmount+'</td><td>'+(e.javakDetail ||'-')+'</td><td>'+e.profit+'</td><td>'+(e.account||'-')+'</td><td>'+(e.jamaDetails||'-')+'</td><td>'+(e.remarks||'-')+'</td></tr>';
+          sr++;
+        });
+        grandTotalWtHrs += totalWtHrs;
+        grandTotalIncome += totalIncome;
+        grandTotalDiesel += totalDiesel;
+        grandTotalJavak += totalJavak;
+        grandTotalProfit += totalProfit;
+        html += '<tr class="party-total"><td colspan="5">Party Total</td><td>'+totalWtHrs.toFixed(2)+'</td><td>'+totalIncome+'</td><td>'+totalDiesel+'</td><td>'+totalJavak+'</td><td></td><td>'+totalProfit+'</td><td colspan="3"></td></tr></tbody></table>';
+      });
+      if(Object.keys(partyGroups).length > 1){
+        html += '<table style="margin-top:10px;border:2px solid #075E54"><thead><tr class="grand-total"><td colspan="5">GRAND TOTAL</td><td>'+grandTotalWtHrs.toFixed(2)+'</td><td>'+grandTotalIncome+'</td><td>'+grandTotalDiesel+'</td><td>'+grandTotalJavak+'</td><td></td><td>'+grandTotalProfit+'</td><td colspan="3"></td></tr></thead></table>';
+      }
+    }
+    document.getElementById('billContent').innerHTML = html;
+    document.getElementById('billCount').innerText = 'Total Records: '+filtered.length;
+    var title = combine? 'Combined Bill Report - આવક જાવક' : 'Party Wise Bill Report - આવક જાવક';
+    var filterInfo = [];
+    if(selectedParties.length > 0) filterInfo.push('Party: ' + selectedParties.join(', '));
+    if(vehicle) filterInfo.push('Vehicle: ' + vehicle);
+    if(account) filterInfo.push('Account: ' + account);
+    if(from) filterInfo.push('From: ' + formatDate(from));
+    if(to) filterInfo.push('To: ' + formatDate(to));
+    document.getElementById('billTitle').innerText = title;
+    document.getElementById('billFilterInfo').innerText = filterInfo.join(' | ');
+  }
+
+  window.printBill = function(){
+    if(document.getElementById('billContent').innerHTML===''){alert('પહેલા બિલ જુઓ');return;}
+    window.print();
+  }
+
+  window.exportExcel = function(){
+    var csv = 'Sr No,Date,Vehicle,Trip,Rate,Weight/Hours,Aavak,Diesel,Javak Amount,Javak Detail,Total Javak,Nafo,Account,Party Name,Jama Details,Remarks\n';
+    window.entries.forEach(function(e){
+      var qty = e.vehicle === 'JCB'? (e.hours || 0) + ' Hrs' : (e.weight || 0) + ' MT';
+      var totalJavak = (e.diesel || 0) + (e.javakAmount || 0);
+      csv += e.srNo+','+formatDate(e.date)+','+e.vehicle+','+(e.trip || '')+','+(e.rate || 0)+','+qty+','+e.amount+','+e.diesel+','+e.javakAmount+','+(e.javakDetail ||'')+','+totalJavak+','+e.profit+','+(e.account||'')+','+e.partyName+','+(e.jamaDetails||'')+','+(e.remarks||'')+'\n';
     });
-    if(Object.keys(partyGroups).length > 1){
-      html += '<table style="margin-top:10px;border:2px solid #075E54"><thead><tr class="grand-total"><td colspan="5">GRAND TOTAL</td><td>'+grandTotalWtHrs.toFixed(2)+'</td><td>'+grandTotalIncome+'</td><td>'+grandTotalDiesel+'</td><td>'+grandTotalJavak+'</td><td></td><td>'+grandTotalProfit+'</td><td colspan="3"></td></tr></thead></table>';
-    }
+    var blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'trip-bill-aavak-javak-'+new Date().toISOString().split('T')[0]+'.csv'; a.click();
   }
-  document.getElementById('billContent').innerHTML = html;
-  document.getElementById('billCount').innerText = 'Total Records: '+filtered.length;
-  var title = combine? 'Combined Bill Report - આવક જાવક' : 'Party Wise Bill Report - આવક જાવક';
-  var filterInfo = [];
-  if(selectedParties.length > 0) filterInfo.push('Party: ' + selectedParties.join(', '));
-  if(vehicle) filterInfo.push('Vehicle: ' + vehicle);
-  if(account) filterInfo.push('Account: ' + account);
-  if(from) filterInfo.push('From: ' + formatDate(from));
-  if(to) filterInfo.push('To: ' + formatDate(to));
-  document.getElementById('billTitle').innerText = title;
-  document.getElementById('billFilterInfo').innerText = filterInfo.join(' | ');
-}
-function printBill(){
-  if(document.getElementById('billContent').innerHTML===''){alert('પહેલા બિલ જુઓ');return;}
-  window.print();
-}
-function exportExcel(){
-  var csv = 'Sr No,Date,Vehicle,Trip,Rate,Weight/Hours,Aavak,Diesel,Javak Amount,Javak Detail,Total Javak,Nafo,Account,Party Name,Jama Details,Remarks\n';
-  window.entries.forEach(function(e){
-    var qty = e.vehicle === 'JCB'? (e.hours || 0) + ' Hrs' : (e.weight || 0) + ' MT';
-    var totalJavak = (e.diesel || 0) + (e.javakAmount || 0);
-    csv += e.srNo+','+formatDate(e.date)+','+e.vehicle+','+(e.trip || '')+','+(e.rate || 0)+','+qty+','+e.amount+','+e.diesel+','+e.javakAmount+','+(e.javakDetail ||'')+','+totalJavak+','+e.profit+','+(e.account||'')+','+e.partyName+','+(e.jamaDetails||'')+','+(e.remarks||'')+'\n';
-  });
-  var blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url; a.download = 'trip-bill-aavak-javak-'+new Date().toISOString().split('T')[0]+'.csv'; a.click();
-}
-function exportBackup(){
-  exportExcel();
-  alert('Excel Download થઈ ગયું. Firebase માં ડેટા સેવ છે એટલે બેકઅપની જરૂર નથી.');
-}
-function restoreBackup(event){
-  installJSON(event);
-}
-function installJSON(event){
-  var file = event.target.files[0];
-  if(!file) return;
-  var reader = new FileReader();
-  reader.onload = async function(e){
-    try{
-      var jsonData = JSON.parse(e.target.result);
-      if(!Array.isArray(jsonData)){alert('JSON ફાઈલમાં Array હોવું જોઈએ.');return;}
-      if(confirm('આ ફાઈલમાં '+jsonData.length+' એન્ટ્રી છે. Firebase માં અપલોડ કરવી?')){
-        for(let item of jsonData){
-          var entry = {
-            srNo: item.Sr || item.srNo || 0,
-            date: item.Date? item.Date.split('/').reverse().join('-') : (item.date || ''),
-            vehicle: item.Vehicle || item.vehicle || '',
-            trip: item.Trip || item.trip || '',
-            rate: item.Rate || item.rate || 0,
-            weight: (item.Vehicle==='JCB' || item.vehicle==='JCB')? 0 : (item.Weight || item.weight || 0),
-            hours: (item.Vehicle==='JCB' || item.vehicle==='JCB')? (item.Hours || item.hours || 0) : 0,
-            amount: item.આવક || item.amount || 0,
-            diesel: item.ડીઝલ || item.diesel || 0,
-            javakAmount: item.જાવક || item.javakAmount || item['જાવક Amt'] || 0,
-            javakDetail: item['જાવક Detail'] || item.javakDetail || '',
-            profit: item.નફો || item.profit || 0,
-            account: item.Account || item.account || '',
-            partyName: item.Party || item.partyName || '',
-                        jamaDetails: item['જમા Details'] || item.jamaDetails || '',
-            remarks: item.Remarks || item.remarks || '',
-            createdAt: Date.now()
-          };
-          await addDoc(collection(db, "entries"), entry);
+
+  window.exportBackup = function(){
+    exportExcel();
+    alert('Excel Download થઈ ગયું. Firebase માં ડેટા સેવ છે એટલે બેકઅપની જરૂર નથી.');
+  }
+
+  window.restoreBackup = function(event){
+    installJSON(event);
+  }
+
+  window.installJSON = async function(event){
+    var file = event.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = async function(e){
+      try{
+        var jsonData = JSON.parse(e.target.result);
+        if(!Array.isArray(jsonData)){alert('JSON ફાઈલમાં Array હોવું જોઈએ.');return;}
+        if(confirm('આ ફાઈલમાં '+jsonData.length+' એન્ટ્રી છે. Firebase માં અપલોડ કરવી?')){
+          for(let item of jsonData){
+            var entry = {
+              srNo: item.Sr || item.srNo || 0,
+              date: item.Date? item.Date.split('/').reverse().join('-') : (item.date || ''),
+              vehicle: item.Vehicle || item.vehicle || '',
+              trip: item.Trip || item.trip || '',
+              rate: item.Rate || item.rate || 0,
+              weight: (item.Vehicle==='JCB' || item.vehicle==='JCB')? 0 : (item.Weight || item.weight || 0),
+              hours: (item.Vehicle==='JCB' || item.vehicle==='JCB')? (item.Hours || item.hours || 0) : 0,
+                            amount: item.આવક || item.amount || 0,
+              diesel: item.ડીઝલ || item.diesel || 0,
+              javakAmount: item.જાવક || item.javakAmount || item['જાવક Amt'] || 0,
+              javakDetail: item['જાવક Detail'] || item.javakDetail || '',
+              profit: item.નફો || item.profit || 0,
+              account: item.Account || item.account || '',
+              partyName: item.Party || item.partyName || '',
+              jamaDetails: item['જમા Details'] || item.jamaDetails || '',
+              remarks: item.Remarks || item.remarks || '',
+              createdAt: Date.now()
+            };
+            await addDoc(collection(db, "entries"), entry);
+          }
+          alert('✅ સફળ! '+jsonData.length+' એન્ટ્રી Firebase માં અપલોડ થઈ ગઈ.');
         }
-        alert('✅ સફળ! '+jsonData.length+' એન્ટ્રી Firebase માં અપલોડ થઈ ગઈ.');
+      }catch(err){
+        alert('JSON ફાઈલ ખોટી છે. Error: '+err.message);
       }
-    }catch(err){
-      alert('JSON ફાઈલ ખોટી છે. Error: '+err.message);
-    }
-  };
-  reader.readAsText(file);
-  event.target.value = '';
-}
-async function clearAllData(){
-  if(confirm('બધો ડેટા Firebase માંથી ડિલીટ થઈ જશે. પાક્કું?')){
-    if(confirm('છેલ્લી વાર પૂછું છું. બધું ભૂંસી નાખું?')){
-      for(let entry of window.entries){
-        await deleteDoc(doc(db, "entries", entry.firebaseId));
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  }
+
+  window.clearAllData = async function(){
+    if(confirm('બધો ડેટા Firebase માંથી ડિલીટ થઈ જશે. પાક્કું?')){
+      if(confirm('છેલ્લી વાર પૂછું છું. બધું ભૂંસી નાખું?')){
+        for(let entry of window.entries){
+          await deleteDoc(doc(db, "entries", entry.firebaseId));
+        }
+        alert('બધો ડેટા ડિલીટ થઈ ગયો.');
       }
-      alert('બધો ડેટા ડિલીટ થઈ ગયો.');
     }
   }
-}
-// Init
-document.getElementById('date').valueAsDate = new Date();
-var today = new Date().toISOString().split('T')[0];
-document.getElementById('fromDate').value = today.substring(0,8)+'01';
-document.getElementById('toDate').value = today;
-checkVehicleType();
-setSrNo();
+
+  // Init
+  document.getElementById('date').valueAsDate = new Date();
+  var today = new Date().toISOString().split('T')[0];
+  document.getElementById('fromDate').value = today.substring(0,8)+'01';
+  document.getElementById('toDate').value = today;
+  checkVehicleType();
+  setSrNo();
 </script>
 </body>
 </html>
