@@ -3,42 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trip Bill - Firebase Sync</title>
+    <title>Trip Bill - આવક જાવક</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f3f4f6; padding: 10px; }
-       .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-       .header { background: #2563eb; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
-       .header h1 { font-size: 24px; }
-       .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; padding: 15px; background: #f9fafb; }
-       .stat-card { background: white; padding: 15px; border-radius: 6px; text-align: center; border: 1px solid #e5e7eb; }
-       .stat-card h3 { font-size: 12px; color: #6b7280; margin-bottom: 5px; }
-       .stat-card p { font-size: 20px; font-weight: bold; color: #1f2937; }
-       .form-section { padding: 15px; border-bottom: 1px solid #e5e7eb; }
-       .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 10px; }
-       .form-group label { display: block; font-size: 12px; color: #374151; margin-bottom: 4px; font-weight: 500; }
-       .form-group input,.form-group select { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; }
-       .form-group input:focus,.form-group select:focus { outline: none; border-color: #2563eb; }
-       .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; }
-       .btn-primary { background: #2563eb; color: white; width: 100%; }
-       .btn-primary:hover { background: #1d4ed8; }
-       .btn-danger { background: #dc2626; color: white; padding: 4px 8px; font-size: 12px; }
-       .table-section { padding: 15px; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th { background: #f3f4f6; padding: 10px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; }
-        td { padding: 10px; border-bottom: 1px solid #e5e7eb; }
-        tr:hover { background: #f9fafb; }
-       .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; cursor: pointer; }
-       .status-paid { background: #d1fae5; color: #065f46; }
-       .status-pending { background: #fed7aa; color: #9a3412; }
-        @media (max-width: 768px) {
-           .form-grid { grid-template-columns: 1fr; }
-            table { font-size: 11px; }
-            th, td { padding: 6px; }
-        }
+        body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 10px; }
+       .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 8px; }
+       .header { background: #0d9488; color: white; padding: 15px; text-align: center; border-radius: 8px 8px 0 0; }
+       .tabs { display: flex; gap: 5px; padding: 10px; background: #f9fafb; }
+       .tab { padding: 10px 20px; background: #e5e7eb; border: none; border-radius: 6px; cursor: pointer; }
+       .tab.active { background: #0d9488; color: white; }
+       .form-box { padding: 15px; border: 1px solid #e5e7eb; margin: 10px; border-radius: 6px; }
+       .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 10px; }
+       .form-group label { display: block; font-size: 12px; margin-bottom: 4px; color: #374151; }
+       .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; }
+       .btn-green { background: #16a34a; color: white; padding: 12px; border: none; border-radius: 6px; width: 100%; font-size: 16px; cursor: pointer; }
+       .btn-blue { background: #0d9488; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }
+       .btn-red { background: #dc2626; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }
+       .summary { padding: 10px; display: flex; gap: 20px; font-size: 14px; }
+       .summary span { color: #16a34a; }
+       .summary span.red { color: #dc2626; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #0d9488; color: white; padding: 10px; font-size: 13px; }
+        td { padding: 8px; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
     </style>
 
-    <!-- Firebase SDK - આ તારો Config છે -->
+    <!-- Firebase SDK -->
     <script type="module">
       import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js'
       import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'
@@ -62,212 +51,214 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚗 Trip Bill Manager</h1>
-            <p style="font-size:12px;opacity:0.9;margin-top:5px">Online Sync - Mobile + Laptop</p>
+            <h2>🚛 Trip Bill - આવક જાવક</h2>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active">એન્ટ્રી</button>
+            <button class="tab">બિલ/રિપોર્ટ</button>
+            <button class="tab">બેકઅપ</button>
         </div>
 
-        <div class="stats">
-            <div class="stat-card">
-                <h3>કુલ Trips</h3>
-                <p id="totalTrips">0</p>
-            </div>
-            <div class="stat-card">
-                <h3>કુલ રકમ</h3>
-                <p id="totalAmount">₹0</p>
-            </div>
-            <div class="stat-card">
-                <h3>બાકી રકમ</h3>
-                <p id="pendingAmount" style="color:#ea580c">₹0</p>
-            </div>
-        </div>
-
-        <div class="form-section">
-            <div class="form-grid">
+        <div class="form-box">
+            <div class="form-row">
                 <div class="form-group">
-                    <label>તારીખ</label>
+                    <label>Sr No</label>
+                    <input type="text" id="srno" value="1">
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
                     <input type="date" id="date">
                 </div>
+            </div>
+            <div class="form-row">
                 <div class="form-group">
-                    <label>પાર્ટી નામ</label>
-                    <input type="text" id="party" placeholder="પાર્ટીનું નામ">
+                    <label>Vehicle</label>
+                    <input type="text" id="vehicle" placeholder="JCB">
                 </div>
                 <div class="form-group">
-                    <label>ક્યાંથી</label>
-                    <input type="text" id="from" placeholder="From">
+                    <label>Trip Details</label>
+                    <input type="text" id="tripDetails" placeholder="Trip Details">
+                </div>
+            </div>
+            
+            <h4 style="margin:10px 0;color:#0d9488">આવક - Income</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <input type="number" id="income" placeholder="1000">
                 </div>
                 <div class="form-group">
-                    <label>ક્યાં સુધી</label>
-                    <input type="text" id="to" placeholder="To">
+                    <input type="number" id="income2" placeholder="8">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <input type="number" id="income3" placeholder="0" style="background:#d1fae5">
+                </div>
+            </div>
+
+            <h4 style="margin:10px 0;color:#dc2626">જાવક - Expense</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <input type="text" id="expense1" placeholder="ડીઝલ ₹">
                 </div>
                 <div class="form-group">
-                    <label>કિલોમીટર</label>
-                    <input type="number" id="km" placeholder="0">
+                    <input type="number" id="expenseAmt" placeholder="જાવક Amount ₹">
                 </div>
+            </div>
+            <div class="form-row">
                 <div class="form-group">
-                    <label>ભાવ (Per KM)</label>
-                    <input type="number" id="rate" placeholder="0">
+                    <label>જાવક Detail: ટોલ/રોયલ્ટી/મજૂરી</label>
+                    <input type="number" id="expenseDetail" value="0">
                 </div>
+            <div class="form-row">
                 <div class="form-group">
-                    <label>કુલ રકમ</label>
-                    <input type="number" id="amount" placeholder="0">
-                </div>
-                <div class="form-group">
-                    <label>વાહન નંબર</label>
-                    <input type="text" id="vehicle" placeholder="GJ-01-XX-1234">
-                </div>
-                <div class="form-group">
-                    <label>સ્ટેટસ</label>
-                    <select id="status">
-                        <option value="Pending">Pending</option>
-                        <option value="Paid">Paid</option>
+                    <select id="account">
+                        <option>Account સિલેક્ટ</option>
+                        <option>વાકો</option>
+                        <option>કેશ</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>બિલ ફોટો</label>
-                    <input type="file" id="billImage" accept="image/*">
+                    <input type="text" id="party" placeholder="Party Name">
                 </div>
             </div>
-            <button class="btn btn-primary" onclick="addTrip()">➕ Trip ઉમેરો</button>
+            <div class="form-row">
+                <div class="form-group">
+                    <input type="text" id="amountDetails" placeholder="Amount જમા Details: ચેક/UTR/તારીખ">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <input type="text" id="remarks" placeholder="Remarks">
+                </div>
+            </div>
+            
+            <button class="btn-green" onclick="saveEntry()">એન્ટ્રી સેવ કરો</button>
         </div>
 
-        <div class="table-section">
-            <table>
-                <thead>
-                    <tr>
-                        <th>તારીખ</th>
-                        <th>પાર્ટી</th>
-                        <th>રૂટ</th>
-                        <th>KM</th>
-                        <th>રકમ</th>
-                        <th>વાહન</th>
-                        <th>સ્ટેટસ</th>
-                        <th>બિલ</th>
-                        <th>ડિલીટ</th>
-                    </tr>
-                </thead>
-                <tbody id="tripTable"></tbody>
-            </table>
+        <div style="padding:10px;display:flex;gap:10px">
+            <button class="btn-blue" style="flex:1">Excel Sheet</button>
+            <button class="btn-red" style="flex:1">Sr No 1 થી</button>
         </div>
+
+        <div class="summary">
+            <span>કુલ આવક: ₹<span id="totalIncome">0</span></span> |
+            <span class="red">કુલ જાવક: ₹<span id="totalExpense">0</span></span> |
+            <span>ચોખ્ખો નફો: ₹<span id="netProfit">0</span></span>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Sr</th>
+                    <th>Date</th>
+                    <th>Vehicle</th>
+                    <th>Party</th>
+                    <th>આવક</th>
+                    <th>જાવક</th>
+                    <th>નફો</th>
+                    <th>Account</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable"></tbody>
+        </table>
     </div>
 
 <script>
-    let trips = [];
+    let entries = [];
     const { db, firestore } = window;
     const { collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, updateDoc } = firestore;
 
-    // Real-time Sync - મોબાઈલમાં એડ કરે તો લેપટોપમાં આપોઆપ દેખાય
-    onSnapshot(collection(db, "trips"), (snapshot) => {
-        trips = [];
+    // Real-time Sync
+    onSnapshot(collection(db, "entries"), (snapshot) => {
+        entries = [];
         snapshot.forEach(doc => {
-            trips.push({ id: doc.id,...doc.data() });
+            entries.push({ id: doc.id,...doc.data() });
         });
         renderTable();
+        updateSummary();
     });
 
-    document.getElementById('km').addEventListener('input', calcAmount);
-    document.getElementById('rate').addEventListener('input', calcAmount);
-
-    function calcAmount() {
-        const km = parseFloat(document.getElementById('km').value) || 0;
-        const rate = parseFloat(document.getElementById('rate').value) || 0;
-        document.getElementById('amount').value = km * rate;
-    }
-
-    async function addTrip() {
-        const fileInput = document.getElementById('billImage');
-        const file = fileInput.files[0];
-
-        const trip = {
+    async function saveEntry() {
+        const entry = {
+            srno: document.getElementById('srno').value,
             date: document.getElementById('date').value,
-            party: document.getElementById('party').value,
-            from: document.getElementById('from').value,
-            to: document.getElementById('to').value,
-            km: parseFloat(document.getElementById('km').value) || 0,
-            rate: parseFloat(document.getElementById('rate').value) || 0,
-            amount: parseFloat(document.getElementById('amount').value) || 0,
             vehicle: document.getElementById('vehicle').value,
-            status: document.getElementById('status').value,
-            image: null,
+            tripDetails: document.getElementById('tripDetails').value,
+            income: parseFloat(document.getElementById('income').value) || 0,
+            income2: parseFloat(document.getElementById('income2').value) || 0,
+            income3: parseFloat(document.getElementById('income3').value) || 0,
+            expense1: document.getElementById('expense1').value,
+            expenseAmt: parseFloat(document.getElementById('expenseAmt').value) || 0,
+            expenseDetail: parseFloat(document.getElementById('expenseDetail').value) || 0,
+            account: document.getElementById('account').value,
+            party: document.getElementById('party').value,
+            amountDetails: document.getElementById('amountDetails').value,
+            remarks: document.getElementById('remarks').value,
             createdAt: Date.now()
         };
 
-        if (!trip.date ||!trip.party ||!trip.amount) {
-            alert('તારીખ, પાર્ટી અને રકમ ફરજિયાત છે!');
-            return;
-        }
-
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                trip.image = e.target.result;
-                await addDoc(collection(db, "trips"), trip);
-                clearForm();
-            };
-            reader.readAsDataURL(file);
-        } else {
-            await addDoc(collection(db, "trips"), trip);
-            clearForm();
-        }
+        await addDoc(collection(db, "entries"), entry);
+        clearForm();
     }
 
-    async function deleteTrip(id) {
-        if (confirm('આ Trip ડિલીટ કરવી છે?')) {
-            await deleteDoc(doc(db, "trips", id));
+    async function deleteEntry(id) {
+        if (confirm('ડિલીટ કરવી છે?')) {
+            await deleteDoc(doc(db, "entries", id));
         }
-    }
-
-    async function toggleStatus(id) {
-        const trip = trips.find(t => t.id === id);
-        const newStatus = trip.status === 'Paid'? 'Pending' : 'Paid';
-        await updateDoc(doc(db, "trips", id), { status: newStatus });
     }
 
     function clearForm() {
         document.getElementById('date').value = '';
-        document.getElementById('party').value = '';
-        document.getElementById('from').value = '';
-        document.getElementById('to').value = '';
-        document.getElementById('km').value = '';
-        document.getElementById('rate').value = '';
-        document.getElementById('amount').value = '';
         document.getElementById('vehicle').value = '';
-        document.getElementById('status').value = 'Pending';
-        document.getElementById('billImage').value = '';
-    }
-
-    function showImage(base64) {
-        const w = window.open();
-        w.document.write('<img src="' + base64 + '" style="max-width:100%">');
+        document.getElementById('tripDetails').value = '';
+        document.getElementById('income').value = '';
+        document.getElementById('income2').value = '';
+        document.getElementById('income3').value = '0';
+        document.getElementById('expense1').value = '';
+        document.getElementById('expenseAmt').value = '';
+        document.getElementById('expenseDetail').value = '0';
+        document.getElementById('party').value = '';
+        document.getElementById('amountDetails').value = '';
+        document.getElementById('remarks').value = '';
     }
 
     function renderTable() {
-        const tbody = document.getElementById('tripTable');
+        const tbody = document.getElementById('dataTable');
         tbody.innerHTML = '';
 
-        let totalAmt = 0, pendingAmt = 0;
-
-        trips.sort((a,b) => b.createdAt - a.createdAt).forEach(t => {
-            totalAmt += t.amount;
-            if (t.status === 'Pending') pendingAmt += t.amount;
-
+        entries.sort((a,b) => b.createdAt - a.createdAt).forEach(e => {
+            const totalIncome = e.income + e.income2 + e.income3;
+            const totalExpense = e.expenseAmt + e.expenseDetail;
+            const profit = totalIncome - totalExpense;
+            
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${t.date}</td>
-                <td>${t.party}</td>
-                <td>${t.from} → ${t.to}</td>
-                <td>${t.km}</td>
-                <td>₹${t.amount}</td>
-                <td>${t.vehicle}</td>
-                <td><span class="status-badge ${t.status==='Paid'?'status-paid':'status-pending'}" onclick="toggleStatus('${t.id}')">${t.status}</span></td>
-                <td>${t.image? '<button onclick="showImage(`' + t.image + '`)" style="background:#2563eb;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:12px">📷 જુઓ</button>' : '-'}</td>
-                <td><button class="btn-danger" onclick="deleteTrip('${t.id}')">🗑️</button></td>
+                <td>${e.srno}</td>
+                <td>${e.date}</td>
+                <td>${e.vehicle}</td>
+                <td>${e.party}</td>
+                <td>₹${totalIncome}</td>
+                <td>₹${totalExpense}</td>
+                <td>₹${profit}</td>
+                <td>${e.account}</td>
+                <td><button onclick="deleteEntry('${e.id}')" style="background:#dc2626;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer">🗑️</button></td>
             `;
             tbody.appendChild(tr);
         });
+    }
 
-        document.getElementById('totalTrips').textContent = trips.length;
-        document.getElementById('totalAmount').textContent = '₹' + totalAmt;
-        document.getElementById('pendingAmount').textContent = '₹' + pendingAmt;
+    function updateSummary() {
+        let totalInc = 0, totalExp = 0;
+        entries.forEach(e => {
+            totalInc += (e.income + e.income2 + e.income3);
+            totalExp += (e.expenseAmt + e.expenseDetail);
+        });
+        document.getElementById('totalIncome').textContent = totalInc;
+        document.getElementById('totalExpense').textContent = totalExp;
+        document.getElementById('netProfit').textContent = totalInc - totalExp;
     }
 </script>
 </body>
