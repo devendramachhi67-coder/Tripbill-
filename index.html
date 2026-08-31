@@ -44,6 +44,8 @@ th{background:#075E54;color:white;position:sticky;top:0}
 .checkbox-row{display:flex;align-items:center;gap:8px;margin:8px 0}
 .checkbox-row input[type="checkbox"]{width:auto;margin:0}
 .checkbox-row label{margin:0;font-size:14px}
+.filter-row{display:flex;gap:5px;flex-wrap:wrap}
+.filter-row > *{flex:1;min-width:120px}
 @media print{
 body{background:white}
 .tabs,.card:first-child,button,.checkbox-row{display:none!important}
@@ -112,6 +114,17 @@ table{font-size:9px}
 <button id="updateBtn" class="btn-orange hidden" onclick="updateEntry()">એન્ટ્રી અપડેટ કરો</button>
 </div>
 <div class="card">
+<div class="filter-row">
+  <input type="text" id="dashboardSearch" placeholder="🔍 સર્ચ (Trip, Detail, Remarks...)" oninput="showData()">
+  <select id="dashboardVehicle" onchange="showData()"><option value="">All Vehicle</option></select>
+  <select id="dashboardParty" onchange="showData()"><option value="">All Party</option></select>
+  <select id="dashboardAccount" onchange="showData()"><option value="">All Account</option></select>
+</div>
+<div class="filter-row">
+  <input type="date" id="dashboardFrom" onchange="showData()">
+  <input type="date" id="dashboardTo" onchange="showData()">
+  <button class="btn-blue" onclick="clearDashboardFilters()">Clear Filters</button>
+</div>
 <div class="row">
   <button class="btn-blue" onclick="exportExcel()">Excel Sheet</button>
   <button class="btn-red" onclick="resetSrNo()">Sr No 1 થી</button>
@@ -177,12 +190,11 @@ table{font-size:9px}
 <h3>Data Backup & Restore</h3>
 <p style="font-size:13px">તમારો બધો ડેટા હવે Firebase માં સેવ છે. ફોન/લેપટોપ ગમે ત્યાંથી એક્સેસ થશે.</p>
 <div class="row">
-  <button class="btn-purple" onclick="exportBackup()">📥 Excel Download</button>
-  <button class="btn-blue" onclick="document.getElementById('restoreFile').click()">📤 JSON Restore</button>
-  <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="restoreBackup(event)">
+  <button class="btn-purple" onclick="exportExcel()">📥 Excel Download</button>
+  <button class="btn-blue" onclick="exportJSON()">📥 JSON Backup</button>
 </div>
-<div class="row" style="margin-top:10px">
-  <button class="btn-green" onclick="document.getElementById('jsonFile').click()">📂 JSON ફાઈલ Install કરો</button>
+<div class="row">
+  <button class="btn-green" onclick="document.getElementById('jsonFile').click()">📂 JSON ફાઈલ Restore કરો</button>
   <input type="file" id="jsonFile" accept=".json" style="display:none" onchange="installJSON(event)">
 </div>
 <div class="row" style="margin-top:10px">
@@ -217,11 +229,12 @@ table{font-size:9px}
   onSnapshot(collection(db, "entries"), (snapshot) => {
       window.entries = [];
       snapshot.forEach(docSnap => {
-          window.entries.push({ firebaseId: docSnap.id,...docSnap.data() });
+          window.entries.push({ firebaseId: docSnap.id, ...docSnap.data() });
       });
       if (window.entries.length > 0) {
           window.lastSrNo = Math.max(...window.entries.map(e => e.srNo || 0));
       }
+      updateDashboardFilters();
       showData();
       setSrNo();
       updateLists();
@@ -239,7 +252,10 @@ table{font-size:9px}
     document.getElementById('entryTab').classList.toggle('hidden',tab!=='entry');
     document.getElementById('billTab').classList.toggle('hidden',tab!=='bill');
     document.getElementById('backupTab').classList.toggle('hidden',tab!=='backup');
-    if(tab==='bill') updateLists();
+    if(tab==='bill') {
+      updateLists();
+      generateBill();
+    }
   }
 
   function getNextSrNo(){
@@ -317,6 +333,32 @@ table{font-size:9px}
     });
   }
 
+  function updateDashboardFilters(){
+    var parties = [...new Set(window.entries.map(function(e){return e.partyName}))].filter(function(p){return p}).sort();
+    var vehicles = [...new Set(window.entries.map(function(e){return e.vehicle}))].filter(function(v){return v});
+    var accounts = [...new Set(window.entries.map(function(e){return e.account}))].filter(function(a){return a}).sort();
+    
+    var selV = document.getElementById('dashboardVehicle');
+    var selP = document.getElementById('dashboardParty');
+    var selA = document.getElementById('dashboardAccount');
+    
+    var currentV = selV.value;
+    var currentP = selP.value;
+    var currentA = selA.value;
+    
+    selV.innerHTML = '<option value="">All Vehicle</option>';
+    selP.innerHTML = '<option value="">All Party</option>';
+    selA.innerHTML = '<option value="">All Account</option>';
+    
+    vehicles.forEach(function(v){ selV.innerHTML += '<option value="'+v+'">'+v+'</option>'; });
+    parties.forEach(function(p){ selP.innerHTML += '<option value="'+p+'">'+p+'</option>'; });
+    accounts.forEach(function(a){ selA.innerHTML += '<option value="'+a+'">'+a+'</option>'; });
+    
+    selV.value = currentV;
+    selP.value = currentP;
+    selA.value = currentA;
+  }
+
   window.saveEntry = async function(){
     var v = document.getElementById('vehicle').value.toUpperCase();
     var e = {
@@ -365,7 +407,12 @@ table{font-size:9px}
     checkVehicleType();
     document.getElementById('saveBtn').classList.add('hidden');
     document.getElementById('updateBtn').classList.remove('hidden');
-    document.querySelector('.tab').click();
+    // Switch to entry tab
+    document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
+    document.querySelector('.tab').classList.add('active');
+    document.getElementById('entryTab').classList.remove('hidden');
+    document.getElementById('billTab').classList.add('hidden');
+    document.getElementById('backupTab').classList.add('hidden');
     window.scrollTo(0,0);
   }
 
@@ -405,21 +452,64 @@ table{font-size:9px}
     setSrNo();
   }
 
-  function showData(){
+  window.showData = function(){
+    var searchTerm = document.getElementById('dashboardSearch').value.toLowerCase().trim();
+    var vehicleFilter = document.getElementById('dashboardVehicle').value;
+    var partyFilter = document.getElementById('dashboardParty').value;
+    var accountFilter = document.getElementById('dashboardAccount').value;
+    var fromDate = document.getElementById('dashboardFrom').value;
+    var toDate = document.getElementById('dashboardTo').value;
+    
     var html = '', totalIncome = 0, totalExpense = 0, totalProfit = 0;
-    window.entries.sort((a,b) => (a.srNo || 0) - (b.srNo || 0)).forEach(function(e,i){
+    var filteredData = window.entries.slice(); // Copy array
+    
+    // Apply filters
+    if (searchTerm) {
+        filteredData = filteredData.filter(function(e) {
+            var searchString = ((e.vehicle || '') + ' ' + (e.partyName || '') + ' ' + (e.trip || '') + ' ' + (e.remarks || '') + ' ' + (e.javakDetail || '')).toLowerCase();
+            return searchString.includes(searchTerm);
+        });
+    }
+    if (vehicleFilter) {
+        filteredData = filteredData.filter(function(e) { return e.vehicle === vehicleFilter; });
+    }
+    if (partyFilter) {
+        filteredData = filteredData.filter(function(e) { return e.partyName === partyFilter; });
+    }
+    if (accountFilter) {
+        filteredData = filteredData.filter(function(e) { return e.account === accountFilter; });
+    }
+    if (fromDate) {
+        filteredData = filteredData.filter(function(e) { return e.date >= fromDate; });
+    }
+    if (toDate) {
+        filteredData = filteredData.filter(function(e) { return e.date <= toDate; });
+    }
+
+    filteredData.sort(function(a,b){ return (a.srNo || 0) - (b.srNo || 0); }).forEach(function(e){
       var expense = (e.diesel || 0) + (e.javakAmount || 0);
       var income = e.amount || 0;
       var profit = e.profit || 0;
       totalIncome += income;
       totalExpense += expense;
       totalProfit += profit;
-      html += '<tr><td>'+e.srNo+'</td><td>'+formatDate(e.date)+'</td><td>'+e.vehicle+'</td><td>'+e.partyName+'</td><td class="income">₹'+income+'</td><td class="expense">₹'+expense+'</td><td class="profit">₹'+profit+'</td><td>'+(e.account||'-')+'</td><td class="action-btn"><button class="edit" onclick="editEntry('+i+')">✏️</button><button class="del" onclick="delEntry('+i+')">X</button></td></tr>';
+      var index = window.entries.indexOf(e);
+      html += '<tr><td>'+e.srNo+'</td><td>'+window.formatDate(e.date)+'</td><td>'+e.vehicle+'</td><td>'+e.partyName+'</td><td class="income">₹'+income+'</td><td class="expense">₹'+expense+'</td><td class="profit">₹'+profit+'</td><td>'+(e.account||'-')+'</td><td class="action-btn"><button class="edit" onclick="editEntry('+index+')">✏️</button><button class="del" onclick="delEntry('+index+')">X</button></td></tr>';
     });
     document.getElementById('tableBody').innerHTML = html;
     document.getElementById('totalIncome').innerText = totalIncome;
     document.getElementById('totalExpense').innerText = totalExpense;
     document.getElementById('totalProfit').innerText = totalProfit;
+  }
+
+  window.clearDashboardFilters = function(){
+    document.getElementById('dashboardSearch').value = '';
+    document.getElementById('dashboardVehicle').value = '';
+    document.getElementById('dashboardParty').value = '';
+    document.getElementById('dashboardAccount').value = '';
+    document.getElementById('dashboardFrom').value = '';
+    document.getElementById('dashboardTo').value = '';
+    showData();
   }
 
   window.delEntry = async function(i){
@@ -450,21 +540,24 @@ table{font-size:9px}
     var combine = document.getElementById('combineParties').checked;
 
     var filtered = window.entries.filter(function(e){
-      if(selectedParties.length > 0 &&!selectedParties.includes(e.partyName)) return false;
-      if(vehicle && e.vehicle!== vehicle) return false;
-      if(account && e.account!== account) return false;
+      if(selectedParties.length > 0 && !selectedParties.includes(e.partyName)) return false;
+      if(vehicle && e.vehicle !== vehicle) return false;
+      if(account && e.account !== account) return false;
       if(from && e.date < from) return false;
       if(to && e.date > to) return false;
-      if(search &&!(e.trip||'').toLowerCase().includes(search) &&!(e.javakDetail||'').toLowerCase().includes(search) &&!(e.remarks||'').toLowerCase().includes(search)) return false;
+      if(search && !(e.trip||'').toLowerCase().includes(search) && !(e.javakDetail||'').toLowerCase().includes(search) && !(e.remarks||'').toLowerCase().includes(search)) return false;
       return true;
     });
+
+    // Sort by date (oldest first)
+    filtered.sort(function(a, b){ return (a.date || '').localeCompare(b.date || ''); });
 
     var html = '';
     var grandTotalWtHrs = 0, grandTotalIncome = 0, grandTotalDiesel = 0, grandTotalJavak = 0, grandTotalProfit = 0;
 
     if(combine){
       var sr = 1;
-      html += '<table><thead><tr><th>Sr</th><th>તારીખ</th><th>Vehicle</th><th>Party</th><th>Trip</th><th>Rate</th><th>Weight/Hrs</th><th>આવક</th><th>ડીઝલ</th><th>જાવક Amt</th><th>જાવક Detail</th><th>નફો</th><th>Account</th><th>જમા Details</th><th>Remarks</th></tr></thead><tbody>';
+      html += '<table><thead><tr><th>Sr</th><th>તારીખ</th><th>Vehicle</th><th>Party</th><th>Trip</th><th>Rate</th><th>Weight/Hrs</th><th>આવક</th><th>ડીઝલ</th><th>જાવક Amt</th><th>જાવક Detail</th><th>નફો</th><th>Account</th><th>જમા Details</th><th>Remarks</th><th>Action</th></tr></thead><tbody>';
       filtered.forEach(function(e){
         var qty = e.vehicle === 'JCB'? (e.hours || 0) : (e.weight || 0);
         var qtyLabel = e.vehicle === 'JCB'? (e.hours || 0) + ' Hrs' : (e.weight || 0) + ' MT';
@@ -473,10 +566,11 @@ table{font-size:9px}
         grandTotalDiesel += e.diesel;
         grandTotalJavak += e.javakAmount;
         grandTotalProfit += e.profit;
-        html += '<tr><td>'+sr+'</td><td>'+formatDate(e.date)+'</td><td>'+e.vehicle+'</td><td>'+e.partyName+'</td><td>'+(e.trip || '-')+'</td><td>'+(e.rate || 0)+'</td><td>'+qtyLabel+'</td><td>'+e.amount+'</td><td>'+e.diesel+'</td><td>'+e.javakAmount+'</td><td>'+(e.javakDetail ||'-')+'</td><td>'+e.profit+'</td><td>'+(e.account||'-')+'</td><td>'+(e.jamaDetails||'-')+'</td><td>'+(e.remarks||'-')+'</td></tr>';
+        var index = window.entries.indexOf(e);
+        html += '<tr><td>'+sr+'</td><td>'+window.formatDate(e.date)+'</td><td>'+e.vehicle+'</td><td>'+e.partyName+'</td><td>'+(e.trip || '-')+'</td><td>'+(e.rate || 0)+'</td><td>'+qtyLabel+'</td><td>'+e.amount+'</td><td>'+e.diesel+'</td><td>'+e.javakAmount+'</td><td>'+(e.javakDetail ||'-')+'</td><td>'+e.profit+'</td><td>'+(e.account||'-')+'</td><td>'+(e.jamaDetails||'-')+'</td><td>'+(e.remarks||'-')+'</td><td class="action-btn"><button class="edit" onclick="editEntry('+index+')">✏️</button><button class="del" onclick="delEntry('+index+')">X</button></td></tr>';
         sr++;
       });
-      html += '<tr class="grand-total"><td colspan="6">GRAND TOTAL</td><td>'+grandTotalWtHrs.toFixed(2)+'</td><td>'+grandTotalIncome+'</td><td>'+grandTotalDiesel+'</td><td>'+grandTotalJavak+'</td><td></td><td>'+grandTotalProfit+'</td><td colspan="3"></td></tr></tbody></table>';
+      html += '<tr class="grand-total"><td colspan="6">GRAND TOTAL</td><td>'+grandTotalWtHrs.toFixed(2)+'</td><td>'+grandTotalIncome+'</td><td>'+grandTotalDiesel+'</td><td>'+grandTotalJavak+'</td><td></td><td>'+grandTotalProfit+'</td><td colspan="4"></td></tr></tbody></table>';
     }else{
       var partyGroups = {};
       filtered.forEach(function(e){
@@ -489,7 +583,7 @@ table{font-size:9px}
         var sr = 1;
         var totalWtHrs = 0, totalIncome = 0, totalDiesel = 0, totalJavak = 0, totalProfit = 0;
         html += '<div class="party-header">Party: '+partyName+'</div>';
-        html += '<table><thead><tr><th>Sr</th><th>તારીખ</th><th>Vehicle</th><th>Trip</th><th>Rate</th><th>Weight/Hrs</th><th>આવક</th><th>ડીઝલ</th><th>જાવક Amt</th><th>જાવક Detail</th><th>નફો</th><th>Account</th><th>જમા Details</th><th>Remarks</th></tr></thead><tbody>';
+        html += '<table><thead><tr><th>Sr</th><th>તારીખ</th><th>Vehicle</th><th>Trip</th><th>Rate</th><th>Weight/Hrs</th><th>આવક</th><th>ડીઝલ</th><th>જાવક Amt</th><th>જાવક Detail</th><th>નફો</th><th>Account</th><th>જમા Details</th><th>Remarks</th><th>Action</th></tr></thead><tbody>';
         partyEntries.forEach(function(e){
           var qty = e.vehicle === 'JCB'? (e.hours || 0) : (e.weight || 0);
           var qtyLabel = e.vehicle === 'JCB'? (e.hours || 0) + ' Hrs' : (e.weight || 0) + ' MT';
@@ -498,7 +592,8 @@ table{font-size:9px}
           totalDiesel += e.diesel;
           totalJavak += e.javakAmount;
           totalProfit += e.profit;
-          html += '<tr><td>'+sr+'</td><td>'+formatDate(e.date)+'</td><td>'+e.vehicle+'</td><td>'+(e.trip || '-')+'</td><td>'+(e.rate || 0)+'</td><td>'+qtyLabel+'</td><td>'+e.amount+'</td><td>'+e.diesel+'</td><td>'+e.javakAmount+'</td><td>'+(e.javakDetail ||'-')+'</td><td>'+e.profit+'</td><td>'+(e.account||'-')+'</td><td>'+(e.jamaDetails||'-')+'</td><td>'+(e.remarks||'-')+'</td></tr>';
+          var index = window.entries.indexOf(e);
+          html += '<tr><td>'+sr+'</td><td>'+window.formatDate(e.date)+'</td><td>'+e.vehicle+'</td><td>'+(e.trip || '-')+'</td><td>'+(e.rate || 0)+'</td><td>'+qtyLabel+'</td><td>'+e.amount+'</td><td>'+e.diesel+'</td><td>'+e.javakAmount+'</td><td>'+(e.javakDetail ||'-')+'</td><td>'+e.profit+'</td><td>'+(e.account||'-')+'</td><td>'+(e.jamaDetails||'-')+'</td><td>'+(e.remarks||'-')+'</td><td class="action-btn"><button class="edit" onclick="editEntry('+index+')">✏️</button><button class="del" onclick="delEntry('+index+')">X</button></td></tr>';
           sr++;
         });
         grandTotalWtHrs += totalWtHrs;
@@ -506,10 +601,10 @@ table{font-size:9px}
         grandTotalDiesel += totalDiesel;
         grandTotalJavak += totalJavak;
         grandTotalProfit += totalProfit;
-        html += '<tr class="party-total"><td colspan="5">Party Total</td><td>'+totalWtHrs.toFixed(2)+'</td><td>'+totalIncome+'</td><td>'+totalDiesel+'</td><td>'+totalJavak+'</td><td></td><td>'+totalProfit+'</td><td colspan="3"></td></tr></tbody></table>';
+        html += '<tr class="party-total"><td colspan="5">Party Total</td><td>'+totalWtHrs.toFixed(2)+'</td><td>'+totalIncome+'</td><td>'+totalDiesel+'</td><td>'+totalJavak+'</td><td></td><td>'+totalProfit+'</td><td colspan="4"></td></tr></tbody></table>';
       });
       if(Object.keys(partyGroups).length > 1){
-        html += '<table style="margin-top:10px;border:2px solid #075E54"><thead><tr class="grand-total"><td colspan="5">GRAND TOTAL</td><td>'+grandTotalWtHrs.toFixed(2)+'</td><td>'+grandTotalIncome+'</td><td>'+grandTotalDiesel+'</td><td>'+grandTotalJavak+'</td><td></td><td>'+grandTotalProfit+'</td><td colspan="3"></td></tr></thead></table>';
+        html += '<table style="margin-top:10px;border:2px solid #075E54"><thead><tr class="grand-total"><td colspan="5">GRAND TOTAL</td><td>'+grandTotalWtHrs.toFixed(2)+'</td><td>'+grandTotalIncome+'</td><td>'+grandTotalDiesel+'</td><td>'+grandTotalJavak+'</td><td></td><td>'+grandTotalProfit+'</td><td colspan="4"></td></tr></thead></table>';
       }
     }
     document.getElementById('billContent').innerHTML = html;
@@ -519,8 +614,8 @@ table{font-size:9px}
     if(selectedParties.length > 0) filterInfo.push('Party: ' + selectedParties.join(', '));
     if(vehicle) filterInfo.push('Vehicle: ' + vehicle);
     if(account) filterInfo.push('Account: ' + account);
-    if(from) filterInfo.push('From: ' + formatDate(from));
-    if(to) filterInfo.push('To: ' + formatDate(to));
+    if(from) filterInfo.push('From: ' + window.formatDate(from));
+    if(to) filterInfo.push('To: ' + window.formatDate(to));
     document.getElementById('billTitle').innerText = title;
     document.getElementById('billFilterInfo').innerText = filterInfo.join(' | ');
   }
@@ -535,7 +630,7 @@ table{font-size:9px}
     window.entries.forEach(function(e){
       var qty = e.vehicle === 'JCB'? (e.hours || 0) + ' Hrs' : (e.weight || 0) + ' MT';
       var totalJavak = (e.diesel || 0) + (e.javakAmount || 0);
-      csv += e.srNo+','+formatDate(e.date)+','+e.vehicle+','+(e.trip || '')+','+(e.rate || 0)+','+qty+','+e.amount+','+e.diesel+','+e.javakAmount+','+(e.javakDetail ||'')+','+totalJavak+','+e.profit+','+(e.account||'')+','+e.partyName+','+(e.jamaDetails||'')+','+(e.remarks||'')+'\n';
+      csv += e.srNo+','+window.formatDate(e.date)+','+e.vehicle+','+(e.trip || '')+','+(e.rate || 0)+','+qty+','+e.amount+','+e.diesel+','+e.javakAmount+','+(e.javakDetail ||'')+','+totalJavak+','+e.profit+','+(e.account||'')+','+e.partyName+','+(e.jamaDetails||'')+','+(e.remarks||'')+'\n';
     });
     var blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
     var url = URL.createObjectURL(blob);
@@ -543,13 +638,31 @@ table{font-size:9px}
     a.href = url; a.download = 'trip-bill-aavak-javak-'+new Date().toISOString().split('T')[0]+'.csv'; a.click();
   }
 
-  window.exportBackup = function(){
-    exportExcel();
-    alert('Excel Download થઈ ગયું. Firebase માં ડેટા સેવ છે એટલે બેકઅપની જરૂર નથી.');
-  }
-
-  window.restoreBackup = function(event){
-    installJSON(event);
+  window.exportJSON = function(){
+    var data = window.entries.map(function(e){
+      return {
+        srNo: e.srNo,
+        date: e.date,
+        vehicle: e.vehicle,
+        trip: e.trip,
+        rate: e.rate,
+        weight: e.weight,
+        hours: e.hours,
+        amount: e.amount,
+        diesel: e.diesel,
+        javakAmount: e.javakAmount,
+        javakDetail: e.javakDetail,
+        profit: e.profit,
+        account: e.account,
+        partyName: e.partyName,
+        jamaDetails: e.jamaDetails,
+        remarks: e.remarks
+      };
+    });
+    var blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'trip-bill-backup-'+new Date().toISOString().split('T')[0]+'.json'; a.click();
   }
 
   window.installJSON = async function(event){
@@ -561,27 +674,29 @@ table{font-size:9px}
         var jsonData = JSON.parse(e.target.result);
         if(!Array.isArray(jsonData)){alert('JSON ફાઈલમાં Array હોવું જોઈએ.');return;}
         if(confirm('આ ફાઈલમાં '+jsonData.length+' એન્ટ્રી છે. Firebase માં અપલોડ કરવી?')){
+          var count = 0;
           for(let item of jsonData){
             var entry = {
-              srNo: item.Sr || item.srNo || 0,
-              date: item.Date? item.Date.split('/').reverse().join('-') : (item.date || ''),
-              vehicle: item.Vehicle || item.vehicle || '',
-              trip: item.Trip || item.trip || '',
-              rate: item.Rate || item.rate || 0,
-              weight: (item.Vehicle==='JCB' || item.vehicle==='JCB')? 0 : (item.Weight || item.weight || 0),
-              hours: (item.Vehicle==='JCB' || item.vehicle==='JCB')? (item.Hours || item.hours || 0) : 0,
-                            amount: item.આવક || item.amount || 0,
-              diesel: item.ડીઝલ || item.diesel || 0,
-              javakAmount: item.જાવક || item.javakAmount || item['જાવક Amt'] || 0,
-              javakDetail: item['જાવક Detail'] || item.javakDetail || '',
-              profit: item.નફો || item.profit || 0,
-              account: item.Account || item.account || '',
-              partyName: item.Party || item.partyName || '',
-              jamaDetails: item['જમા Details'] || item.jamaDetails || '',
-              remarks: item.Remarks || item.remarks || '',
-              createdAt: Date.now()
+              srNo: item.srNo || 0,
+              date: item.date || '',
+              vehicle: item.vehicle || '',
+              trip: item.trip || '',
+              rate: item.rate || 0,
+              weight: item.weight || 0,
+              hours: item.hours || 0,
+              amount: item.amount || 0,
+              diesel: item.diesel || 0,
+              javakAmount: item.javakAmount || 0,
+              javakDetail: item.javakDetail || '',
+              profit: item.profit || 0,
+              account: item.account || '',
+              partyName: item.partyName || '',
+              jamaDetails: item.jamaDetails || '',
+              remarks: item.remarks || '',
+              createdAt: Date.now() + count
             };
             await addDoc(collection(db, "entries"), entry);
+            count++;
           }
           alert('✅ સફળ! '+jsonData.length+' એન્ટ્રી Firebase માં અપલોડ થઈ ગઈ.');
         }
@@ -609,6 +724,8 @@ table{font-size:9px}
   var today = new Date().toISOString().split('T')[0];
   document.getElementById('fromDate').value = today.substring(0,8)+'01';
   document.getElementById('toDate').value = today;
+  document.getElementById('dashboardFrom').value = '';
+  document.getElementById('dashboardTo').value = '';
   checkVehicleType();
   setSrNo();
 </script>
